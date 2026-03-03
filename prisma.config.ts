@@ -3,13 +3,37 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+// Lakebase DB: must be a postgresql:// URL (not prisma+postgres://). See https://pris.ly/d/config-url
+function getDatasourceUrl(): string {
+  const url =
+    process.env["LAKEBASE_DATABASE_URL"] ?? process.env["DATABASE_URL"];
+  if (url == null || typeof url !== "string") {
+    throw new Error(
+      "LAKEBASE_DATABASE_URL or DATABASE_URL must be set (Prisma datasource)."
+    );
+  }
+  const s = url.trim();
+  if (!s) {
+    throw new Error(
+      "LAKEBASE_DATABASE_URL or DATABASE_URL is empty. Set a valid PostgreSQL URL."
+    );
+  }
+  if (!s.startsWith("postgresql://") && !s.startsWith("postgres://")) {
+    throw new Error(
+      `Database URL must use scheme postgresql:// or postgres://. ` +
+        `Got: ${s.split("://")[0] || "(empty)"}. ` +
+        "For Lakebase use a PostgreSQL connection string (postgresql://...)."
+    );
+  }
+  return s;
+}
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
   },
   datasource: {
-    // Lakebase DB credentials (separate from Databricks workspace)
-    url: process.env["LAKEBASE_DATABASE_URL"] ?? process.env["DATABASE_URL"],
+    url: getDatasourceUrl(),
   },
 });
