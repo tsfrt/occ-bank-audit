@@ -1,4 +1,5 @@
 # Deploy preview app for feature branches (no asset bundle).
+# Var: DATABRICKS_WORKSPACE_USER — workspace user path segment (e.g. 12345@databricks or user@example.com).
 # Secret key is per deployment environment (e.g. database-url-pr-5, database-url-preview).
 # In each app instance, add secret resource "database_url" → scope bank-audit-app, key database-url-<env>.
 
@@ -122,6 +123,17 @@ jobs:
           fi
         continue-on-error: true
 
+      - name: Sync app source to workspace
+        id: sync
+        env:
+          WORKSPACE_USER: ${{ vars.DATABRICKS_WORKSPACE_USER }}
+        run: |
+          SOURCE_PATH="/Users/${WORKSPACE_USER}/apps/bank-audit-analyst/${{ steps.env.outputs.deployment_env }}"
+          echo "Syncing to workspace path: $SOURCE_PATH"
+          databricks sync . "$SOURCE_PATH" --full --exclude-from .gitignore
+          echo "source_code_path=$SOURCE_PATH" >> "$GITHUB_OUTPUT"
+
       - name: Deploy app (preview)
-        run: databricks apps deploy ${{ steps.env.outputs.app_name }} --source-code-path .
+        run: |
+          databricks apps deploy ${{ steps.env.outputs.app_name }} --source-code-path "${{ steps.sync.outputs.source_code_path }}"
         continue-on-error: true

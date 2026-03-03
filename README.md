@@ -64,15 +64,16 @@ Each app instance (prod, preview, per-PR) uses its own secret key so multiple de
 1. Create the app in the workspace (or the first deploy creates it).
 2. Add a **secret resource** to that app with resource key **`database_url`** pointing to scope **`bank-audit-app`** and secret key **`database-url-<env>`** (e.g. `database-url-prod` or `database-url-pr-5`). The workflow creates the scope and writes the connection string to the environment-specific key before each deploy.
 
-### GitHub secrets
+### GitHub secrets and variables
 
-| Purpose | Secrets |
-|--------|---------|
+| Purpose | Secrets / variables |
+|--------|---------------------|
 | **Workspace** (CLI, app deploy) | `DATABRICKS_HOST`, `DATABRICKS_TOKEN` |
 | **Lakebase DB** (migrations + app runtime) | `LAKEBASE_DATABASE_URL` or `DATABASE_URL` |
+| **Workspace path** (sync + deploy) | **Variable** `DATABRICKS_WORKSPACE_USER` — user segment for `/Users/<value>/apps/...` (e.g. `12345@databricks` or your workspace user email). The token must have write access to that path. |
 
-- **Production** (tag `v*`): Writes DB URL to `bank-audit-app` / `database-url-prod`, deploys app **`bank-audit-analyst`**.
-- **Preview** (non-`main`): Env is `pr-<number>` for PRs or the sanitized branch name. Writes DB URL to `bank-audit-app` / `database-url-<env>`, deploys app **`bank-audit-analyst-<env>`**.
+- **Production** (tag `v*`): Syncs source to `/Users/<DATABRICKS_WORKSPACE_USER>/apps/bank-audit-analyst/prod`, writes DB URL to `bank-audit-app` / `database-url-prod`, deploys app **`bank-audit-analyst`** from that workspace path.
+- **Preview** (non-`main`): Env is `pr-<number>` for PRs or the sanitized branch name. Syncs to `/Users/<DATABRICKS_WORKSPACE_USER>/apps/bank-audit-analyst/<env>`, writes DB URL to `bank-audit-app` / `database-url-<env>`, deploys app **`bank-audit-analyst-<env>`** from that path.
 
 **Branch protection**: Enforce that only approved PRs can merge into `main` (GitHub repo Settings → Branches → Branch protection rule for `main`).
 

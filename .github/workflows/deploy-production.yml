@@ -2,6 +2,7 @@
 # Runs Prisma migrations, updates the app's DATABASE_URL secret, then deploys the app (no asset bundle).
 #
 # Secrets: DATABRICKS_HOST, DATABRICKS_TOKEN, LAKEBASE_DATABASE_URL (or DATABASE_URL).
+# Var: DATABRICKS_WORKSPACE_USER — workspace user path segment (e.g. 12345@databricks or user@example.com).
 # Secret is scoped by environment: scope "bank-audit-app", key "database-url-prod".
 # In the Databricks app for this environment, add secret resource "database_url" → scope bank-audit-app, key database-url-prod.
 
@@ -80,5 +81,16 @@ jobs:
         run: |
           printf '%s' "$DB_URL" | databricks secrets put-secret ${{ env.SECRET_SCOPE }} ${{ env.SECRET_KEY }}
 
+      - name: Sync app source to workspace
+        id: sync
+        env:
+          WORKSPACE_USER: ${{ vars.DATABRICKS_WORKSPACE_USER }}
+        run: |
+          SOURCE_PATH="/Users/${WORKSPACE_USER}/apps/${{ env.APP_NAME }}/${{ env.DEPLOYMENT_ENV }}"
+          echo "Syncing to workspace path: $SOURCE_PATH"
+          databricks sync . "$SOURCE_PATH" --full --exclude-from .gitignore
+          echo "source_code_path=$SOURCE_PATH" >> "$GITHUB_OUTPUT"
+
       - name: Deploy app (production)
-        run: databricks apps deploy ${{ env.APP_NAME }} --source-code-path .
+        run: |
+          databricks apps deploy ${{ env.APP_NAME }} --source-code-path "${{ steps.sync.outputs.source_code_path }}"
