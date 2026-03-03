@@ -1,10 +1,6 @@
-# Deploy preview app for feature branches.
-# Creates a Lakebase branch from production, runs migrations, deploys the app.
-#
-# Credentials (use separate secrets):
-#   Workspace (CLI, bundle, model serving): DATABRICKS_HOST, DATABRICKS_TOKEN
-#   Lakebase DB (Prisma/migrations only):  LAKEBASE_DATABASE_URL or PREVIEW_DATABASE_URL
-#   Optional: LAKEBASE_PROJECT_ID, LAKEBASE_PROD_BRANCH_ID for branch script
+# Deploy preview app for feature branches (no asset bundle).
+# Secret key is per deployment environment (e.g. database-url-pr-5, database-url-preview).
+# In each app instance, add secret resource "database_url" → scope bank-audit-app, key database-url-<env>.
 
 name: Deploy Preview
 
@@ -18,16 +14,32 @@ on:
 
 env:
   NODE_VERSION: "20"
+  SECRET_SCOPE: bank-audit-app
 
 jobs:
   deploy-preview:
-    runs-on: self-hosted 
+    runs-on: self-hosted
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set deployment environment
+        id: env
+        run: |
+          if [ -n "${{ github.event.pull_request.number }}" ]; then
+            DEPLOYMENT_ENV="pr-${{ github.event.pull_request.number }}"
+          else
+            DEPLOYMENT_ENV="${GITHUB_REF#refs/heads/}"
+            DEPLOYMENT_ENV="${DEPLOYMENT_ENV//\//-}"
+            DEPLOYMENT_ENV="${DEPLOYMENT_ENV//[^a-zA-Z0-9-]/}"
+            [ -z "$DEPLOYMENT_ENV" ] && DEPLOYMENT_ENV=preview
+          fi
+          echo "deployment_env=${DEPLOYMENT_ENV}" >> $GITHUB_OUTPUT
+          echo "app_name=bank-audit-analyst-${DEPLOYMENT_ENV}" >> $GITHUB_OUTPUT
+          echo "secret_key=database-url-${DEPLOYMENT_ENV}" >> $GITHUB_OUTPUT
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -70,6 +82,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Prisma client
+        env:
+          LAKEBASE_DATABASE_URL: postgresql://localhost:5432/placeholder
+        run: npx prisma generate
+
       - name: Run Prisma migrations (preview DB)
         if: steps.db_url.outputs.configured == '1'
         env:
@@ -82,6 +99,10 @@ jobs:
           npx prisma migrate deploy
         continue-on-error: true
 
+      - name: Skip Prisma migrations (no DB URL)
+        if: steps.db_url.outputs.configured != '1'
+        run: echo "Skipping Prisma migrate deploy: no PREVIEW_DATABASE_URL, LAKEBASE_DATABASE_URL, or DATABASE_URL secret set."
+
       - name: Build Next.js app
         env:
           LAKEBASE_DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
@@ -89,13 +110,18 @@ jobs:
         run: npm run build
         continue-on-error: true
 
-      - name: Validate Databricks bundle
-        run: databricks bundle validate -t preview
+      - name: Create secret scope (if not exists)
+        run: databricks secrets create-scope ${{ env.SECRET_SCOPE }} 2>/dev/null || true
+
+      - name: Set DATABASE_URL secret for app
+        env:
+          DB_URL: ${{ secrets.PREVIEW_DATABASE_URL || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
+        run: |
+          if [ -n "$DB_URL" ]; then
+            printf '%s' "$DB_URL" | databricks secrets put-secret ${{ env.SECRET_SCOPE }} ${{ steps.env.outputs.secret_key }}
+          fi
         continue-on-error: true
 
-      - name: Deploy bundle (preview target)
-        env:
-          LAKEBASE_DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
-          DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
-        run: lakebase_connection_string=${{ secrets.PREVIEW_DATABASE_URL || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }} databricks bundle deploy -t preview
+      - name: Deploy app (preview)
+        run: databricks apps deploy ${{ steps.env.outputs.app_name }} --source-code-path .
         continue-on-error: true

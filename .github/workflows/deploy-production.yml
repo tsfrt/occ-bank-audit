@@ -1,9 +1,9 @@
 # Deploy production when a version tag is pushed to main.
-# Runs Prisma migrations against production Lakebase, then deploys the bundle.
+# Runs Prisma migrations, updates the app's DATABASE_URL secret, then deploys the app (no asset bundle).
 #
-# Credentials (use separate secrets):
-#   Workspace (CLI, bundle):     DATABRICKS_HOST, DATABRICKS_TOKEN
-#   Lakebase DB (Prisma only):   LAKEBASE_DATABASE_URL or DATABASE_URL
+# Secrets: DATABRICKS_HOST, DATABRICKS_TOKEN, LAKEBASE_DATABASE_URL (or DATABASE_URL).
+# Secret is scoped by environment: scope "bank-audit-app", key "database-url-prod".
+# In the Databricks app for this environment, add secret resource "database_url" → scope bank-audit-app, key database-url-prod.
 
 name: Deploy Production
 
@@ -11,6 +11,12 @@ on:
   push:
     tags:
       - "v*"
+
+env:
+  DEPLOYMENT_ENV: prod
+  APP_NAME: bank-audit-analyst
+  SECRET_SCOPE: bank-audit-app
+  SECRET_KEY: database-url-prod
 
 jobs:
   deploy-production:
@@ -62,10 +68,17 @@ jobs:
           LAKEBASE_DATABASE_URL: ${{ secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
         run: npm run build
 
-      - name: Validate Databricks bundle
-        run: databricks bundle validate -t prod
-
-      - name: Deploy bundle (production)
+      - name: Create secret scope (if not exists)
         env:
-          LAKEBASE_DATABASE_URL: ${{ secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
-        run: lakebase_connection_string=${{ secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }} databricks bundle deploy -t prod
+          DB_URL: ${{ secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
+        run: |
+          databricks secrets create-scope ${{ env.SECRET_SCOPE }} 2>/dev/null || true
+
+      - name: Set DATABASE_URL secret for app
+        env:
+          DB_URL: ${{ secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
+        run: |
+          printf '%s' "$DB_URL" | databricks secrets put-secret ${{ env.SECRET_SCOPE }} ${{ env.SECRET_KEY }}
+
+      - name: Deploy app (production)
+        run: databricks apps deploy ${{ env.APP_NAME }} --source-code-path .

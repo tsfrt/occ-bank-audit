@@ -50,16 +50,29 @@ See [Databricks CLI for Lakebase](https://docs.databricks.com/aws/en/oltp/projec
 
 ## Deployment
 
-Credentials are split so **Lakebase DB** (Prisma) uses different secrets from **Databricks workspace** (CLI/bundle):
+Deployment uses **Databricks Apps** only (no asset bundles). The app gets `DATABASE_URL` from a Databricks secret; GitHub Actions updates that secret before each deploy.
+
+### One-time app setup per deployment environment
+
+Each app instance (prod, preview, per-PR) uses its own secret key so multiple deployments can coexist in one workspace:
+
+| Environment | App name | Secret key (scope `bank-audit-app`) |
+|-------------|----------|-------------------------------------|
+| Production  | `bank-audit-analyst` | `database-url-prod` |
+| Preview (branch/PR) | `bank-audit-analyst-<env>` e.g. `bank-audit-analyst-pr-5` | `database-url-<env>` e.g. `database-url-pr-5` |
+
+1. Create the app in the workspace (or the first deploy creates it).
+2. Add a **secret resource** to that app with resource key **`database_url`** pointing to scope **`bank-audit-app`** and secret key **`database-url-<env>`** (e.g. `database-url-prod` or `database-url-pr-5`). The workflow creates the scope and writes the connection string to the environment-specific key before each deploy.
+
+### GitHub secrets
 
 | Purpose | Secrets |
 |--------|---------|
-| **Workspace** (CLI, bundle deploy, model serving) | `DATABRICKS_HOST`, `DATABRICKS_TOKEN` |
-| **Lakebase DB** (Prisma, migrations) | `LAKEBASE_DATABASE_URL` or `DATABASE_URL` |
+| **Workspace** (CLI, app deploy) | `DATABRICKS_HOST`, `DATABRICKS_TOKEN` |
+| **Lakebase DB** (migrations + app runtime) | `LAKEBASE_DATABASE_URL` or `DATABASE_URL` |
 
-- **Preview**: Pushing to a non-`main` branch (or opening a PR to `main`) runs the Deploy Preview workflow. Set secrets: `DATABRICKS_HOST`, `DATABRICKS_TOKEN`; and `LAKEBASE_DATABASE_URL` (or `PREVIEW_DATABASE_URL` / `DATABASE_URL`). Optional: `LAKEBASE_PROJECT_ID`, `LAKEBASE_PROD_BRANCH_ID`.
-
-- **Production**: Pushing a tag `v*` runs the Deploy Production workflow. Set secrets: `DATABRICKS_HOST`, `DATABRICKS_TOKEN`; and `LAKEBASE_DATABASE_URL` (or `DATABASE_URL`).
+- **Production** (tag `v*`): Writes DB URL to `bank-audit-app` / `database-url-prod`, deploys app **`bank-audit-analyst`**.
+- **Preview** (non-`main`): Env is `pr-<number>` for PRs or the sanitized branch name. Writes DB URL to `bank-audit-app` / `database-url-<env>`, deploys app **`bank-audit-analyst-<env>`**.
 
 **Branch protection**: Enforce that only approved PRs can merge into `main` (GitHub repo Settings → Branches → Branch protection rule for `main`).
 
