@@ -36,7 +36,7 @@ resources:
           - "npm ci && npm run build && npm run start"
         env:
           - name: DATABASE_URL
-            valueFrom: database_url
+            value_from: database_url
       resources:
         - name: database_url
           secret:
