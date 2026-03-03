@@ -88,5 +88,17 @@ See [Lakebase connection strings](https://docs.databricks.com/aws/en/oltp/projec
 | `npm run build`| Production build               |
 | `npm run start`| Start production server        |
 | `npm run lint` | Run ESLint                     |
+| `npm run db:seed` | Seed DB with sample audit cases |
 | `npx prisma migrate dev` | Create/apply migrations (dev) |
 | `npx prisma migrate deploy` | Apply migrations (CI/prod)     |
+
+### Seed data
+
+Run `npm run db:seed` (or `npx prisma db seed`) after migrations to load sample banks at different audit stages:
+
+- **pending_analysis**: 3 banks (First Regional, Metro Credit Union, Valley Savings & Loan) — no AI analysis yet
+- **pending_review**: 3 banks (Northern Trust, Pacific Commerce, Central Federal) — have risk/AI confidence, not reviewed
+- **reviewed**: 2 banks (Heritage National, Summit Community) — marked reviewed with notes
+- **manual_review**: 2 banks (Riverside Commercial, Gateway Financial) — escalated for manual audit
+
+Seed data uses `reference` values starting with `SEED-`. Re-running the seed removes existing seed cases and recreates them (idempotent).

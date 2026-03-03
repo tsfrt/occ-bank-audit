@@ -34,6 +34,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Prisma client
+        env:
+          LAKEBASE_DATABASE_URL: postgresql://localhost:5432/placeholder
+        run: npx prisma generate
+
+      - name: Validate database connectivity
+        env:
+          LAKEBASE_DATABASE_URL: ${{ secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
+        run: |
+          echo "Checking database connectivity..."
+          npx prisma migrate status
+          echo "Database connection OK."
+
       - name: Run Prisma migrations (production)
         env:
           LAKEBASE_DATABASE_URL: ${{ secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
