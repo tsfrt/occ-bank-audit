@@ -35,6 +35,9 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma client
+        env:
+          # prisma.config.ts loads for every Prisma command; generate does not connect to DB
+          LAKEBASE_DATABASE_URL: postgresql://localhost:5432/placeholder
         run: npx prisma generate
 
       - name: Run Prisma migrations (production)
