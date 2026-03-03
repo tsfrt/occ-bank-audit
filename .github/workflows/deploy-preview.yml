@@ -146,7 +146,7 @@ jobs:
         env:
           WORKSPACE_USER: ${{ vars.DATABRICKS_WORKSPACE_USER }}
         run: |
-          SOURCE_PATH="/Users/${WORKSPACE_USER}/apps/bank-audit-analyst/${{ steps.env.outputs.deployment_env }}"
+          SOURCE_PATH="/Workspace/Users/${WORKSPACE_USER}/apps/bank-audit-analyst/${{ steps.env.outputs.deployment_env }}"
           databricks sync . "$SOURCE_PATH" --full --exclude-from .gitignore
           echo "source_code_path=$SOURCE_PATH" >> "$GITHUB_OUTPUT"
         continue-on-error: true
