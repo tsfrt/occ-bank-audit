@@ -21,7 +21,7 @@ env:
 
 jobs:
   deploy-preview:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted 
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
