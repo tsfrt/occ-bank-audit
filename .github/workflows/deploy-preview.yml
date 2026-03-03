@@ -60,13 +60,11 @@ jobs:
       - name: Resolve Lakebase DB URL for preview
         id: db_url
         run: |
-          # Lakebase DB credentials (separate from workspace). Use preview-specific or default.
-          if [ -n "${{ secrets.PREVIEW_DATABASE_URL }}" ]; then
-            echo "url=${{ secrets.PREVIEW_DATABASE_URL }}" >> $GITHUB_OUTPUT
-          elif [ -n "${{ secrets.LAKEBASE_DATABASE_URL }}" ]; then
-            echo "url=${{ secrets.LAKEBASE_DATABASE_URL }}" >> $GITHUB_OUTPUT
+          # Output 1 if any DB URL secret is set (for conditional migrate); do not echo URL
+          if [ -n "${{ secrets.PREVIEW_DATABASE_URL }}" ] || [ -n "${{ secrets.LAKEBASE_DATABASE_URL }}" ] || [ -n "${{ secrets.DATABASE_URL }}" ]; then
+            echo "configured=1" >> $GITHUB_OUTPUT
           else
-            echo "url=${{ secrets.DATABASE_URL }}" >> $GITHUB_OUTPUT
+            echo "configured=0" >> $GITHUB_OUTPUT
           fi
 
       - name: Install dependencies
@@ -79,15 +77,25 @@ jobs:
         run: npx prisma generate
 
       - name: Run Prisma migrations (preview DB)
+        if: steps.db_url.outputs.configured == '1'
         env:
-          LAKEBASE_DATABASE_URL: ${{ steps.db_url.outputs.url || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
+          # Pass URL from secrets only (avoid step output encoding/limits)
+          LAKEBASE_DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
           DEBUG: "prisma:*"
-        run: npx prisma migrate deploy
+        run: |
+          echo "Database URL is set, running Prisma migrate deploy..."
+          npx prisma migrate deploy
         continue-on-error: true
+
+      - name: Skip Prisma migrations (no DB URL)
+        if: steps.db_url.outputs.configured != '1'
+        run: echo "Skipping Prisma migrate deploy: no PREVIEW_DATABASE_URL, LAKEBASE_DATABASE_URL, or DATABASE_URL secret set."
 
       - name: Build Next.js app
         env:
-          LAKEBASE_DATABASE_URL: ${{ steps.db_url.outputs.url || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
+          LAKEBASE_DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
         run: npm run build
         continue-on-error: true
 
@@ -97,6 +105,7 @@ jobs:
 
       - name: Deploy bundle (preview target)
         env:
-          LAKEBASE_DATABASE_URL: ${{ steps.db_url.outputs.url || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
+          LAKEBASE_DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
         run: databricks bundle deploy -t preview
         continue-on-error: true
