@@ -1,5 +1,9 @@
 # Deploy production when a version tag is pushed to main.
 # Runs Prisma migrations against production Lakebase, then deploys the bundle.
+#
+# Credentials (use separate secrets):
+#   Workspace (CLI, bundle):     DATABRICKS_HOST, DATABRICKS_TOKEN
+#   Lakebase DB (Prisma only):   LAKEBASE_DATABASE_URL or DATABASE_URL
 
 name: Deploy Production
 
@@ -35,18 +39,18 @@ jobs:
 
       - name: Run Prisma migrations (production)
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          LAKEBASE_DATABASE_URL: ${{ secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
         run: npx prisma migrate deploy
 
       - name: Build Next.js app
-        run: npm run build
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          LAKEBASE_DATABASE_URL: ${{ secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
+        run: npm run build
 
       - name: Validate Databricks bundle
         run: databricks bundle validate -t prod
 
       - name: Deploy bundle (production)
-        run: databricks bundle deploy -t prod
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          LAKEBASE_DATABASE_URL: ${{ secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
+        run: databricks bundle deploy -t prod

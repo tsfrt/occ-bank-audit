@@ -9,6 +9,7 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Lakebase DB credentials (separate from Databricks workspace)
+    url: process.env["LAKEBASE_DATABASE_URL"] ?? process.env["DATABASE_URL"],
   },
 });

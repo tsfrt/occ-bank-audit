@@ -1,7 +1,10 @@
 # Deploy preview app for feature branches.
 # Creates a Lakebase branch from production, runs migrations, deploys the app.
-# Requires: DATABRICKS_HOST, DATABRICKS_TOKEN (or OIDC); LAKEBASE_PROJECT_ID, LAKEBASE_PROD_BRANCH_ID (or derive from bundle).
-# DATABASE_URL for the preview is obtained from the Lakebase branch endpoint (e.g. generate-database-credential or stored output).
+#
+# Credentials (use separate secrets):
+#   Workspace (CLI, bundle, model serving): DATABRICKS_HOST, DATABRICKS_TOKEN
+#   Lakebase DB (Prisma/migrations only):  LAKEBASE_DATABASE_URL or PREVIEW_DATABASE_URL
+#   Optional: LAKEBASE_PROJECT_ID, LAKEBASE_PROD_BRANCH_ID for branch script
 
 name: Deploy Preview
 
@@ -54,14 +57,14 @@ jobs:
           ./scripts/lakebase-feature-branch.sh "$PROJECT_ID" "$PROD_BRANCH_ID" "$BRANCH_ID" || true
           echo "branch_resource=projects/$PROJECT_ID/branches/$BRANCH_ID" >> $GITHUB_OUTPUT
 
-      - name: Resolve DATABASE_URL for preview
+      - name: Resolve Lakebase DB URL for preview
         id: db_url
         run: |
-          # Option A: Use a secret that CI maintains per-branch (e.g. PREVIEW_DATABASE_URL_<branch>)
-          # Option B: Call databricks postgres generate-database-credential and parse (OAuth)
-          # For now, require DATABASE_URL to be set for preview via a secret or workflow dispatch input
+          # Lakebase DB credentials (separate from workspace). Use preview-specific or default.
           if [ -n "${{ secrets.PREVIEW_DATABASE_URL }}" ]; then
             echo "url=${{ secrets.PREVIEW_DATABASE_URL }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ secrets.LAKEBASE_DATABASE_URL }}" ]; then
+            echo "url=${{ secrets.LAKEBASE_DATABASE_URL }}" >> $GITHUB_OUTPUT
           else
             echo "url=${{ secrets.DATABASE_URL }}" >> $GITHUB_OUTPUT
           fi
@@ -74,14 +77,14 @@ jobs:
 
       - name: Run Prisma migrations (preview DB)
         env:
-          DATABASE_URL: ${{ steps.db_url.outputs.url || secrets.DATABASE_URL }}
+          LAKEBASE_DATABASE_URL: ${{ steps.db_url.outputs.url || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
         run: npx prisma migrate deploy
         continue-on-error: true
 
       - name: Build Next.js app
-        run: npm run build
         env:
-          DATABASE_URL: ${{ steps.db_url.outputs.url || secrets.DATABASE_URL }}
+          LAKEBASE_DATABASE_URL: ${{ steps.db_url.outputs.url || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
+        run: npm run build
         continue-on-error: true
 
       - name: Validate Databricks bundle
@@ -89,7 +92,7 @@ jobs:
         continue-on-error: true
 
       - name: Deploy bundle (preview target)
-        run: databricks bundle deploy -t preview
         env:
-          DATABASE_URL: ${{ steps.db_url.outputs.url || secrets.DATABASE_URL }}
+          LAKEBASE_DATABASE_URL: ${{ steps.db_url.outputs.url || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
+        run: databricks bundle deploy -t preview
         continue-on-error: true
