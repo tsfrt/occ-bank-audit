@@ -1,0 +1,7 @@
+# Databricks App definition - how to run the app in Databricks Apps runtime
+# https://docs.databricks.com/en/dev-tools/databricks-apps/
+# For Next.js: build and serve with Node
+command:
+  - sh
+  - -c
+  - "npm ci && npm run build && npm run start"

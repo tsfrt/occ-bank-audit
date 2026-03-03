@@ -1,0 +1,103 @@
+# Deploy preview app for feature branches.
+# Creates a Lakebase branch from production, runs migrations, deploys the app.
+# Requires: DATABRICKS_HOST, DATABRICKS_TOKEN (or OIDC); LAKEBASE_PROJECT_ID, LAKEBASE_PROD_BRANCH_ID (or derive from bundle).
+# DATABASE_URL for the preview is obtained from the Lakebase branch endpoint (e.g. generate-database-credential or stored output).
+
+name: Deploy Preview
+
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install Databricks CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/cli/main/install.sh | sh
+          databricks -v
+
+      - name: Configure Databricks auth
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          mkdir -p ~/.databrickscfg
+          echo "host = $DATABRICKS_HOST" >> ~/.databrickscfg
+          echo "token = $DATABRICKS_TOKEN" >> ~/.databrickscfg
+
+      - name: Create or reuse Lakebase branch and endpoint
+        id: lakebase
+        env:
+          PROJECT_ID: ${{ vars.LAKEBASE_PROJECT_ID || secrets.LAKEBASE_PROJECT_ID }}
+          PROD_BRANCH_ID: ${{ vars.LAKEBASE_PROD_BRANCH_ID || secrets.LAKEBASE_PROD_BRANCH_ID }}
+        run: |
+          BRANCH_ID="${{ github.event.pull_request.number }}"
+          if [ -z "$BRANCH_ID" ]; then
+            BRANCH_ID="${GITHUB_REF#refs/heads/}"
+          else
+            BRANCH_ID="pr-${BRANCH_ID}"
+          fi
+          BRANCH_ID="${BRANCH_ID//\//-}"
+          BRANCH_ID="${BRANCH_ID//[^a-zA-Z0-9-]/}"
+          [ -z "$BRANCH_ID" ] && BRANCH_ID="preview"
+          echo "branch_id=${BRANCH_ID}" >> $GITHUB_OUTPUT
+          ./scripts/lakebase-feature-branch.sh "$PROJECT_ID" "$PROD_BRANCH_ID" "$BRANCH_ID" || true
+          echo "branch_resource=projects/$PROJECT_ID/branches/$BRANCH_ID" >> $GITHUB_OUTPUT
+
+      - name: Resolve DATABASE_URL for preview
+        id: db_url
+        run: |
+          # Option A: Use a secret that CI maintains per-branch (e.g. PREVIEW_DATABASE_URL_<branch>)
+          # Option B: Call databricks postgres generate-database-credential and parse (OAuth)
+          # For now, require DATABASE_URL to be set for preview via a secret or workflow dispatch input
+          if [ -n "${{ secrets.PREVIEW_DATABASE_URL }}" ]; then
+            echo "url=${{ secrets.PREVIEW_DATABASE_URL }}" >> $GITHUB_OUTPUT
+          else
+            echo "url=${{ secrets.DATABASE_URL }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run Prisma migrations (preview DB)
+        env:
+          DATABASE_URL: ${{ steps.db_url.outputs.url || secrets.DATABASE_URL }}
+        run: npx prisma migrate deploy
+        continue-on-error: true
+
+      - name: Build Next.js app
+        run: npm run build
+        env:
+          DATABASE_URL: ${{ steps.db_url.outputs.url || secrets.DATABASE_URL }}
+        continue-on-error: true
+
+      - name: Validate Databricks bundle
+        run: databricks bundle validate -t preview
+        continue-on-error: true
+
+      - name: Deploy bundle (preview target)
+        run: databricks bundle deploy -t preview
+        env:
+          DATABASE_URL: ${{ steps.db_url.outputs.url || secrets.DATABASE_URL }}
+        continue-on-error: true

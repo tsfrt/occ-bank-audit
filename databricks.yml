@@ -1,0 +1,42 @@
+# Databricks Asset Bundle - Bank Audit Analyst UI
+# https://docs.databricks.com/en/dev-tools/bundles/
+# Lakebase project/branches/endpoints are created via CLI in CI (see scripts/lakebase-feature-branch.sh)
+
+bundle:
+  name: bank_audit_analyst
+
+resources:
+  apps:
+    bank_audit_analyst_app:
+      name: bank-audit-analyst
+      source_code_path: .
+      description: Office of the Comptroller - Bank Audit Analyst UI (Next.js)
+      # Run command is defined in app.yaml at project root
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: ${var.databricks_host}
+
+  preview:
+    mode: development
+    workspace:
+      host: ${var.databricks_host}
+    # Used by CI for feature-branch deployments; DATABASE_URL from Lakebase branch endpoint
+
+  prod:
+    mode: production
+    workspace:
+      host: ${var.databricks_host}
+      root_path: /Workspace/${var.bundle_root_path}
+    # Production Lakebase branch endpoint for DATABASE_URL
+
+variables:
+  databricks_host:
+    description: Databricks workspace URL
+    default: https://your-workspace.cloud.databricks.com
+  bundle_root_path:
+    description: Root path for bundle in workspace
+    default: .bundle/bank_audit_analyst/prod

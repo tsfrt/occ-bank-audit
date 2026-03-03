@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bank Audit Analyst UI
 
-## Getting Started
+Office of the Comptroller – analyst UI for managing bank audits as cases, with automated AI analysis via Databricks model serving, risk and AI confidence scores, and review workflows (mark as reviewed / dig deeper).
 
-First, run the development server:
+## Stack
+
+- **Next.js** (App Router) + TypeScript + Tailwind
+- **Prisma** with PostgreSQL (Databricks Lakebase)
+- **Databricks** model serving for audit analysis; Lakebase CLI for branching
+- **GitHub Actions** for preview (feature branches) and production (tags on main) deployment
+
+## Local development
+
+1. **Prerequisites**: Node 20+, npm. For DB: PostgreSQL (or Lakebase branch endpoint).
+
+2. **Install and configure**:
+   ```bash
+   npm ci
+   cp .env.example .env
+   ```
+   Edit `.env`:
+   - `DATABASE_URL`: PostgreSQL connection string (e.g. Lakebase branch endpoint or local Postgres).
+   - For “Run analysis”: `DATABRICKS_HOST`, `DATABRICKS_TOKEN`, `MODEL_SERVING_ENDPOINT_NAME`.
+
+3. **Database**: Apply migrations when connected to a real DB:
+   ```bash
+   npx prisma migrate deploy
+   ```
+
+4. **Run**:
+   ```bash
+   npm run dev
+   ```
+   Open [http://localhost:3000](http://localhost:3000).
+
+## Lakebase feature branches
+
+For each Git feature branch, create a Lakebase branch so you can test migrations and run the app in isolation:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+./scripts/lakebase-feature-branch.sh <project_id> <prod_branch_id> <feature_branch_id>
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Example: `./scripts/lakebase-feature-branch.sh bank-audit-db br-main pr-42`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Then get `DATABASE_URL` for that branch (e.g. `databricks postgres generate-database-credential projects/.../branches/.../endpoints/primary`) and run Prisma migrations against it.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+See [Databricks CLI for Lakebase](https://docs.databricks.com/aws/en/oltp/projects/cli).
 
-## Learn More
+## Deployment
 
-To learn more about Next.js, take a look at the following resources:
+- **Preview**: Pushing to a non-`main` branch (or opening a PR to `main`) runs the Deploy Preview workflow. It creates/reuses a Lakebase branch, runs migrations, builds the app, and deploys the bundle with target `preview`. Configure secrets: `DATABRICKS_HOST`, `DATABRICKS_TOKEN`, `DATABASE_URL` (or `PREVIEW_DATABASE_URL`); and `LAKEBASE_PROJECT_ID`, `LAKEBASE_PROD_BRANCH_ID` (vars or secrets).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Production**: Pushing a tag `v*` (e.g. `v1.0.0`) runs the Deploy Production workflow. It runs Prisma migrations against production and deploys the bundle with target `prod`. Configure secrets: `DATABRICKS_HOST`, `DATABRICKS_TOKEN`, `DATABASE_URL`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Branch protection**: Enforce that only approved PRs can merge into `main` (GitHub repo Settings → Branches → Branch protection rule for `main`).
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Command        | Description                    |
+|----------------|--------------------------------|
+| `npm run dev`  | Start Next.js dev server       |
+| `npm run build`| Production build               |
+| `npm run start`| Start production server        |
+| `npm run lint` | Run ESLint                     |
+| `npx prisma migrate dev` | Create/apply migrations (dev) |
+| `npx prisma migrate deploy` | Apply migrations (CI/prod)     |

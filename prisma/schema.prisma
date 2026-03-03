@@ -1,0 +1,74 @@
+// Bank Audit Analyst UI - Prisma schema for Lakebase PostgreSQL
+// https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AuditCaseStatus {
+  pending_analysis
+  pending_review
+  reviewed
+  manual_review
+}
+
+enum CaseReviewAction {
+  reviewed
+  dig_deeper
+}
+
+model AuditCase {
+  id          String   @id @default(cuid())
+  bankId      String   @map("bank_id")
+  bankName    String?  @map("bank_name")
+  reference   String?  // external reference
+  status      AuditCaseStatus @default(pending_analysis)
+  riskScore   Float?   @map("risk_score")   // from latest analysis
+  aiConfidence Float?  @map("ai_confidence") // 0-1 or 0-100 from latest analysis
+  reviewedAt  DateTime? @map("reviewed_at")
+  reviewedBy  String?  @map("reviewed_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  analyses CaseAnalysis[]
+  reviews  CaseReview[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@map("audit_cases")
+}
+
+model CaseAnalysis {
+  id              String   @id @default(cuid())
+  caseId          String   @map("case_id")
+  riskScore       Float    @map("risk_score")
+  aiConfidence    Float    @map("ai_confidence") // 0-1 or 0-100
+  modelEndpoint   String?  @map("model_endpoint")
+  rawPayload      Json?    @map("raw_payload")   // full model response for audit
+  completedAt     DateTime @default(now()) @map("completed_at")
+
+  case AuditCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@map("case_analyses")
+}
+
+model CaseReview {
+  id        String           @id @default(cuid())
+  caseId    String           @map("case_id")
+  action    CaseReviewAction
+  notes     String?
+  reviewedBy String?         @map("reviewed_by")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  case AuditCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@map("case_reviews")
+}
