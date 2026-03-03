@@ -25,6 +25,11 @@ function getDatasourceUrl(): string {
         "For Lakebase use a PostgreSQL connection string (postgresql://...)."
     );
   }
+  // Lakebase requires sslmode=require (otherwise P1010 "denied access" / "(not available)")
+  if (/@[^/]*\.databricks\.com/i.test(s) && !/sslmode=/i.test(s)) {
+    const separator = s.includes("?") ? "&" : "?";
+    return `${s}${separator}sslmode=require`;
+  }
   return s;
 }
 

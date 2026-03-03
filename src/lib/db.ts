@@ -3,6 +3,7 @@ import { PrismaClient } from "@/generated/prisma";
 
 // Lakebase DB credentials are separate from Databricks workspace credentials.
 // The pg adapter requires a postgresql:// URL (not prisma+postgres://).
+// Lakebase requires SSL: https://docs.databricks.com/aws/en/oltp/projects/connection-strings
 function getDatabaseUrl(): string {
   const url =
     process.env.LAKEBASE_DATABASE_URL ?? process.env.DATABASE_URL ?? "";
@@ -17,6 +18,11 @@ function getDatabaseUrl(): string {
       `Database URL must use scheme postgresql:// or postgres:// (got: ${s.slice(0, 20)}...). ` +
         "For Lakebase use a PostgreSQL connection string; do not use prisma+postgres:// here."
     );
+  }
+  // Lakebase requires sslmode=require; without it you get P1010 "denied access" / "(not available)"
+  if (/@[^/]*\.databricks\.com/i.test(s) && !/sslmode=/i.test(s)) {
+    const separator = s.includes("?") ? "&" : "?";
+    return `${s}${separator}sslmode=require`;
   }
   return s;
 }

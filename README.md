@@ -63,6 +63,23 @@ Credentials are split so **Lakebase DB** (Prisma) uses different secrets from **
 
 **Branch protection**: Enforce that only approved PRs can merge into `main` (GitHub repo Settings → Branches → Branch protection rule for `main`).
 
+## Troubleshooting
+
+### P1010: User was denied access on the database `(not available)`
+
+This usually means the connection to Lakebase failed before the database name was known. Common causes:
+
+1. **Missing SSL** – Lakebase requires TLS. Your URL must include `?sslmode=require`. The app and Prisma config auto-add it when the host is `*.databricks.com` and `sslmode` is missing; if you use a different host format, add `?sslmode=require` yourself.
+
+2. **Wrong database name** – Lakebase’s default database is `databricks_postgres`. Use:
+   `postgresql://role:password@ep-xxx.databricks.com/databricks_postgres?sslmode=require`
+
+3. **Invalid or expired credentials** – OAuth tokens from `databricks postgres generate-database-credential` expire (e.g. after 1 hour). For CI or long-running apps, use a [native Postgres password](https://docs.databricks.com/aws/en/oltp/projects/authentication) for the Lakebase role.
+
+4. **Network/firewall** – From GitHub Actions or your network, ensure TCP 5432 to the Lakebase endpoint is allowed and that [Databricks control plane IPs](https://docs.databricks.com/aws/en/resources/ip-domain-region) are allowlisted if required.
+
+See [Lakebase connection strings](https://docs.databricks.com/aws/en/oltp/projects/connection-strings) for the exact URL format.
+
 ## Scripts
 
 | Command        | Description                    |
