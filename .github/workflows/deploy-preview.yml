@@ -153,7 +153,7 @@ jobs:
 
       - name: Deploy app source (set source code path) (preview)
         run: |
-          databricks apps deploy ${{ steps.env.outputs.app_name }} --source-code-path "${{ steps.sync.outputs.source_code_path }}"
+          (cd /tmp && databricks apps deploy ${{ steps.env.outputs.app_name }} --source-code-path "${{ steps.sync.outputs.source_code_path }}")
         continue-on-error: true
 
       - name: Deploy app source and start app (bundle run, preview)

@@ -101,7 +101,7 @@ jobs:
 
       - name: Deploy app source (set source code path)
         run: |
-          databricks apps deploy ${{ env.APP_NAME }} --source-code-path "${{ steps.sync.outputs.source_code_path }}"
+          (cd /tmp && databricks apps deploy ${{ env.APP_NAME }} --source-code-path "${{ steps.sync.outputs.source_code_path }}")
 
       - name: Deploy app source and start app (bundle run)
         run: |
