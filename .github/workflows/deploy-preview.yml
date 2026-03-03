@@ -140,3 +140,27 @@ jobs:
             --var app_name=${{ steps.env.outputs.app_name }} \
             --var secret_key=${{ steps.env.outputs.secret_key }}
         continue-on-error: true
+
+      - name: Sync app source to workspace (preview)
+        id: sync
+        env:
+          WORKSPACE_USER: ${{ vars.DATABRICKS_WORKSPACE_USER }}
+        run: |
+          SOURCE_PATH="/Users/${WORKSPACE_USER}/apps/bank-audit-analyst/${{ steps.env.outputs.deployment_env }}"
+          databricks sync . "$SOURCE_PATH" --full --exclude-from .gitignore
+          echo "source_code_path=$SOURCE_PATH" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+
+      - name: Deploy app source (set source code path) (preview)
+        run: |
+          databricks apps deploy ${{ steps.env.outputs.app_name }} --source-code-path "${{ steps.sync.outputs.source_code_path }}"
+        continue-on-error: true
+
+      - name: Deploy app source and start app (bundle run, preview)
+        run: |
+          databricks bundle run bank_audit_analyst -t preview \
+            --var databricks_host=${{ secrets.DATABRICKS_HOST }} \
+            --var workspace_user=${{ vars.DATABRICKS_WORKSPACE_USER }} \
+            --var app_name=${{ steps.env.outputs.app_name }} \
+            --var secret_key=${{ steps.env.outputs.secret_key }}
+        continue-on-error: true

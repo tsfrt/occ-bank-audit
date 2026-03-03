@@ -1,0 +1,10 @@
+# App runtime config. Also defined in databricks.yml bundle config; this file ensures
+# the deployed source has config when the app runs (secret resource key: database_url).
+command:
+  - sh
+  - -c
+  - "npm ci && npm run build && npm run start"
+
+env:
+  - name: DATABASE_URL
+    value_from: database_url

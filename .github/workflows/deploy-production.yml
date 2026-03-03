@@ -89,3 +89,22 @@ jobs:
           databricks bundle deploy -t prod \
             --var databricks_host=${{ secrets.DATABRICKS_HOST }} \
             --var workspace_user=${{ vars.DATABRICKS_WORKSPACE_USER }}
+
+      - name: Sync app source to workspace
+        id: sync
+        env:
+          WORKSPACE_USER: ${{ vars.DATABRICKS_WORKSPACE_USER }}
+        run: |
+          SOURCE_PATH="/Users/${WORKSPACE_USER}/apps/${{ env.APP_NAME }}/${{ env.DEPLOYMENT_ENV }}"
+          databricks sync . "$SOURCE_PATH" --full --exclude-from .gitignore
+          echo "source_code_path=$SOURCE_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy app source (set source code path)
+        run: |
+          databricks apps deploy ${{ env.APP_NAME }} --source-code-path "${{ steps.sync.outputs.source_code_path }}"
+
+      - name: Deploy app source and start app (bundle run)
+        run: |
+          databricks bundle run bank_audit_analyst -t prod \
+            --var databricks_host=${{ secrets.DATABRICKS_HOST }} \
+            --var workspace_user=${{ vars.DATABRICKS_WORKSPACE_USER }}
