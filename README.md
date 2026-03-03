@@ -50,30 +50,27 @@ See [Databricks CLI for Lakebase](https://docs.databricks.com/aws/en/oltp/projec
 
 ## Deployment
 
-Deployment uses **Databricks Apps** only (no asset bundles). The app gets `DATABASE_URL` from a Databricks secret; GitHub Actions updates that secret before each deploy.
+Deployment uses **Databricks Asset Bundles** (`databricks.yml`). The bundle defines the app (command, env, and **secret resource** for `DATABASE_URL`), so there is no separate `app.yaml`. GitHub Actions creates the secret scope, writes the DB URL to the environment-specific secret key, then runs `databricks bundle deploy`.
 
-### One-time app setup per deployment environment
-
-Each app instance (prod, preview, per-PR) uses its own secret key so multiple deployments can coexist in one workspace:
+### Bundle and environments
 
 | Environment | App name | Secret key (scope `bank-audit-app`) |
 |-------------|----------|-------------------------------------|
 | Production  | `bank-audit-analyst` | `database-url-prod` |
 | Preview (branch/PR) | `bank-audit-analyst-<env>` e.g. `bank-audit-analyst-pr-5` | `database-url-<env>` e.g. `database-url-pr-5` |
 
-1. Create the app in the workspace (or the first deploy creates it).
-2. Add a **secret resource** to that app with resource key **`database_url`** pointing to scope **`bank-audit-app`** and secret key **`database-url-<env>`** (e.g. `database-url-prod` or `database-url-pr-5`). The workflow creates the scope and writes the connection string to the environment-specific key before each deploy.
+The bundle’s app resource references the secret via `resources[].secret` (scope `bank-audit-app`, key from variable). No manual app setup in the UI is required; the first deploy creates the app and the secret reference.
 
 ### GitHub secrets and variables
 
 | Purpose | Secrets / variables |
 |--------|---------------------|
-| **Workspace** (CLI, app deploy) | `DATABRICKS_HOST`, `DATABRICKS_TOKEN` |
+| **Workspace** (CLI, bundle deploy) | `DATABRICKS_HOST`, `DATABRICKS_TOKEN` |
 | **Lakebase DB** (migrations + app runtime) | `LAKEBASE_DATABASE_URL` or `DATABASE_URL` |
-| **Workspace path** (sync + deploy) | **Variable** `DATABRICKS_WORKSPACE_USER` — user segment for `/Users/<value>/apps/...` (e.g. `12345@databricks` or your workspace user email). The token must have write access to that path. |
+| **Bundle** | **Variable** `DATABRICKS_WORKSPACE_USER` — workspace user segment for bundle `root_path` (e.g. `12345@databricks` or your workspace user). The token must have write access to that path. |
 
-- **Production** (tag `v*`): Syncs source to `/Users/<DATABRICKS_WORKSPACE_USER>/apps/bank-audit-analyst/prod`, writes DB URL to `bank-audit-app` / `database-url-prod`, deploys app **`bank-audit-analyst`** from that workspace path.
-- **Preview** (non-`main`): Env is `pr-<number>` for PRs or the sanitized branch name. Syncs to `/Users/<DATABRICKS_WORKSPACE_USER>/apps/bank-audit-analyst/<env>`, writes DB URL to `bank-audit-app` / `database-url-<env>`, deploys app **`bank-audit-analyst-<env>`** from that path.
+- **Production** (tag `v*`): Writes DB URL to `bank-audit-app` / `database-url-prod`, then `databricks bundle deploy -t prod`.
+- **Preview** (non-`main`): Env is `pr-<number>` or sanitized branch name. Writes DB URL to `bank-audit-app` / `database-url-<env>`, then `databricks bundle deploy -t preview` with `app_name` and `secret_key` passed via `-v`.
 
 **Branch protection**: Enforce that only approved PRs can merge into `main` (GitHub repo Settings → Branches → Branch protection rule for `main`).
 

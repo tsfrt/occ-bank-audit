@@ -1,7 +1,6 @@
-# Deploy preview app for feature branches (no asset bundle).
-# Var: DATABRICKS_WORKSPACE_USER — workspace user path segment (e.g. 12345@databricks or user@example.com).
-# Secret key is per deployment environment (e.g. database-url-pr-5, database-url-preview).
-# In each app instance, add secret resource "database_url" → scope bank-audit-app, key database-url-<env>.
+# Deploy preview app for feature branches via the asset bundle.
+# The bundle (databricks.yml) defines the app with secret resource and config; app_name and secret_key are passed per run.
+# Vars: DATABRICKS_WORKSPACE_USER (workspace user path segment for bundle root_path).
 
 name: Deploy Preview
 
@@ -123,17 +122,20 @@ jobs:
           fi
         continue-on-error: true
 
-      - name: Sync app source to workspace
-        id: sync
-        env:
-          WORKSPACE_USER: ${{ vars.DATABRICKS_WORKSPACE_USER }}
+      - name: Validate bundle
         run: |
-          SOURCE_PATH="/Workspace/Users/${WORKSPACE_USER}/apps/bank-audit-analyst/${{ steps.env.outputs.deployment_env }}"
-          echo "Syncing to workspace path: $SOURCE_PATH"
-          databricks sync . "$SOURCE_PATH" --full --exclude-from .gitignore
-          echo "source_code_path=$SOURCE_PATH" >> "$GITHUB_OUTPUT"
+          databricks bundle validate -t preview \
+            -v databricks_host=${{ secrets.DATABRICKS_HOST }} \
+            -v workspace_user=${{ vars.DATABRICKS_WORKSPACE_USER }} \
+            -v app_name=${{ steps.env.outputs.app_name }} \
+            -v secret_key=${{ steps.env.outputs.secret_key }}
+        continue-on-error: true
 
       - name: Deploy app (preview)
         run: |
-          databricks apps deploy ${{ steps.env.outputs.app_name }} --source-code-path "${{ steps.sync.outputs.source_code_path }}"
+          databricks bundle deploy -t preview \
+            -v databricks_host=${{ secrets.DATABRICKS_HOST }} \
+            -v workspace_user=${{ vars.DATABRICKS_WORKSPACE_USER }} \
+            -v app_name=${{ steps.env.outputs.app_name }} \
+            -v secret_key=${{ steps.env.outputs.secret_key }}
         continue-on-error: true

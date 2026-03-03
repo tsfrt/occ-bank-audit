@@ -1,0 +1,62 @@
+# Databricks Asset Bundle for Bank Audit Analyst app.
+# Replaces app.yaml: app config (command, env, secret resource) is defined here.
+# Deploy: databricks bundle deploy -t prod | -t preview -v app_name=... -v secret_key=...
+#
+# Variables (set per target or pass via -v):
+#   databricks_host   — workspace URL (e.g. https://xxx.cloud.databricks.com)
+#   workspace_user   — workspace user path segment for root_path (e.g. 12345@databricks)
+#   app_name         — app name (prod: bank-audit-analyst; preview: bank-audit-analyst-<env>)
+#   secret_key       — secret key in scope bank-audit-app (prod: database-url-prod; preview: database-url-<env>)
+
+bundle:
+  name: bank-audit-analyst-bundle
+
+variables:
+  databricks_host:
+    description: Databricks workspace host URL
+  workspace_user:
+    description: Workspace user segment for bundle root path (e.g. user@example.com or 12345@databricks)
+  app_name:
+    description: App name in the workspace
+    default: bank-audit-analyst
+  secret_key:
+    description: Secret key in scope bank-audit-app for DATABASE_URL
+    default: database-url-prod
+
+resources:
+  apps:
+    bank_audit_analyst:
+      name: ${var.app_name}
+      source_code_path: .
+      description: Bank Audit Analyst UI (Office of the Comptroller)
+      config:
+        command:
+          - sh
+          - -c
+          - "npm ci && npm run build && npm run start"
+        env:
+          - name: DATABASE_URL
+            valueFrom: database_url
+      resources:
+        - name: database_url
+          secret:
+            scope: bank-audit-app
+            key: ${var.secret_key}
+            permission: READ
+
+targets:
+  prod:
+    mode: production
+    variables:
+      app_name: bank-audit-analyst
+      secret_key: database-url-prod
+    workspace:
+      host: ${var.databricks_host}
+      root_path: /Workspace/Users/${var.workspace_user}/.bundle/${bundle.name}/${bundle.target}
+
+  preview:
+    mode: development
+    # app_name and secret_key are passed via -v from the workflow (e.g. bank-audit-analyst-pr-5, database-url-pr-5)
+    workspace:
+      host: ${var.databricks_host}
+      root_path: /Workspace/Users/${var.workspace_user}/.bundle/${bundle.name}/${bundle.target}
