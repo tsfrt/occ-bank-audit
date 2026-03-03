@@ -51,12 +51,12 @@ targets:
       app_name: bank-audit-analyst
       secret_key: database-url-prod
     workspace:
-      host: ${var.databricks_host}
+      host: https://e2-demo-field-eng.cloud.databricks.com/
       root_path: /Workspace/Users/${var.workspace_user}/.bundle/${bundle.name}/${bundle.target}
 
   preview:
     mode: development
     # app_name and secret_key are passed via -v from the workflow (e.g. bank-audit-analyst-pr-5, database-url-pr-5)
     workspace:
-      host: ${var.databricks_host}
+      host: https://e2-demo-field-eng.cloud.databricks.com/
       root_path: /Workspace/Users/${var.workspace_user}/.bundle/${bundle.name}/${bundle.target}
