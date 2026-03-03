@@ -111,14 +111,14 @@ jobs:
         continue-on-error: true
 
       - name: Create secret scope (if not exists)
-        run: databricks secrets create-scope ${{ env.SECRET_SCOPE }} 2>/dev/null || true
+        run: databricks secrets create-scope ${{ env.SECRET_SCOPE }} -t preview 2>/dev/null || true
 
       - name: Set DATABASE_URL secret for app
         env:
           DB_URL: ${{ secrets.PREVIEW_DATABASE_URL || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
         run: |
           if [ -n "$DB_URL" ]; then
-            printf '%s' "$DB_URL" | databricks secrets put-secret ${{ env.SECRET_SCOPE }} ${{ steps.env.outputs.secret_key }}
+            printf '%s' "$DB_URL" | databricks secrets put-secret ${{ env.SECRET_SCOPE }} ${{ steps.env.outputs.secret_key }} -t preview
           fi
         continue-on-error: true
 

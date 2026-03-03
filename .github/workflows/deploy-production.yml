@@ -69,16 +69,14 @@ jobs:
         run: npm run build
 
       - name: Create secret scope (if not exists)
-        env:
-          DB_URL: ${{ secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
         run: |
-          databricks secrets create-scope ${{ env.SECRET_SCOPE }} 2>/dev/null || true
+          databricks secrets create-scope ${{ env.SECRET_SCOPE }} -t prod 2>/dev/null || true
 
       - name: Set DATABASE_URL secret for app
         env:
           DB_URL: ${{ secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
         run: |
-          printf '%s' "$DB_URL" | databricks secrets put-secret ${{ env.SECRET_SCOPE }} ${{ env.SECRET_KEY }}
+          printf '%s' "$DB_URL" | databricks secrets put-secret ${{ env.SECRET_SCOPE }} ${{ env.SECRET_KEY }} -t prod
 
       - name: Validate bundle
         run: |
