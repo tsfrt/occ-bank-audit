@@ -126,17 +126,17 @@ jobs:
       - name: Validate bundle
         run: |
           databricks bundle validate -t preview \
-            -v databricks_host=${{ secrets.DATABRICKS_HOST }} \
-            -v workspace_user=${{ vars.DATABRICKS_WORKSPACE_USER }} \
-            -v app_name=${{ steps.env.outputs.app_name }} \
-            -v secret_key=${{ steps.env.outputs.secret_key }}
+            --var databricks_host=${{ secrets.DATABRICKS_HOST }} \
+            --var workspace_user=${{ vars.DATABRICKS_WORKSPACE_USER }} \
+            --var app_name=${{ steps.env.outputs.app_name }} \
+            --var secret_key=${{ steps.env.outputs.secret_key }}
         continue-on-error: true
 
       - name: Deploy app (preview)
         run: |
           databricks bundle deploy -t preview \
-            -v databricks_host=${{ secrets.DATABRICKS_HOST }} \
-            -v workspace_user=${{ vars.DATABRICKS_WORKSPACE_USER }} \
-            -v app_name=${{ steps.env.outputs.app_name }} \
-            -v secret_key=${{ steps.env.outputs.secret_key }}
+            --var databricks_host=${{ secrets.DATABRICKS_HOST }} \
+            --var workspace_user=${{ vars.DATABRICKS_WORKSPACE_USER }} \
+            --var app_name=${{ steps.env.outputs.app_name }} \
+            --var secret_key=${{ steps.env.outputs.secret_key }}
         continue-on-error: true

@@ -81,11 +81,11 @@ jobs:
       - name: Validate bundle
         run: |
           databricks bundle validate -t prod \
-            -v databricks_host=${{ secrets.DATABRICKS_HOST }} \
-            -v workspace_user=${{ vars.DATABRICKS_WORKSPACE_USER }}
+            --var databricks_host=${{ secrets.DATABRICKS_HOST }} \
+            --var workspace_user=${{ vars.DATABRICKS_WORKSPACE_USER }}
 
       - name: Deploy app (production)
         run: |
           databricks bundle deploy -t prod \
-            -v databricks_host=${{ secrets.DATABRICKS_HOST }} \
-            -v workspace_user=${{ vars.DATABRICKS_WORKSPACE_USER }}
+            --var databricks_host=${{ secrets.DATABRICKS_HOST }} \
+            --var workspace_user=${{ vars.DATABRICKS_WORKSPACE_USER }}
