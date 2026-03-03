@@ -97,5 +97,5 @@ jobs:
         env:
           LAKEBASE_DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
           DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
-        run: databricks bundle deploy -t preview
+        run: lakebase_connection_string=${{ secrets.PREVIEW_DATABASE_URL || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }} databricks bundle deploy -t preview
         continue-on-error: true

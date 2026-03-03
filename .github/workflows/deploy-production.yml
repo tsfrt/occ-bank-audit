@@ -68,4 +68,4 @@ jobs:
       - name: Deploy bundle (production)
         env:
           LAKEBASE_DATABASE_URL: ${{ secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
-        run: databricks bundle deploy -t prod
+        run: lakebase_connection_string=${{ secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }} databricks bundle deploy -t prod

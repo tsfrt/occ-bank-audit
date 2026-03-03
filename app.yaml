@@ -5,3 +5,6 @@ command:
   - sh
   - -c
   - "npm ci && npm run build && npm run start"
+env:
+  - name: DATABASE_URL
+    valueFrom: lakebase_connection_string
