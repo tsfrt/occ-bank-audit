@@ -81,6 +81,7 @@ jobs:
       - name: Run Prisma migrations (preview DB)
         env:
           LAKEBASE_DATABASE_URL: ${{ steps.db_url.outputs.url || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
+          DEBUG: "prisma:*"
         run: npx prisma migrate deploy
         continue-on-error: true
 

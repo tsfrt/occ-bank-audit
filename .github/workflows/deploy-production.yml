@@ -43,6 +43,7 @@ jobs:
       - name: Run Prisma migrations (production)
         env:
           LAKEBASE_DATABASE_URL: ${{ secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
+          DEBUG: "prisma:*"
         run: npx prisma migrate deploy
 
       - name: Build Next.js app
