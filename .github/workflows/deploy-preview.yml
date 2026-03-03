@@ -30,9 +30,7 @@ jobs:
           cache: "npm"
 
       - name: Install Databricks CLI
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/databricks/cli/main/install.sh | sh
-          databricks -v
+        uses: databricks/setup-cli@main
 
       - name: Configure Databricks auth
         env:
