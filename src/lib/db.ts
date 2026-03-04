@@ -11,13 +11,13 @@ function getDatabaseUrl(): string {
 
   if (!s) {
     throw new Error(
-      `LAKEBASE_DATABASE_URL or DATABASE_URL must be set for the database connection: ${s}`
+      `LAKEBASE_DATABASE_URL or DATABASE_URL must be set for the database connection`
     );
   }
   if (!s.startsWith("postgresql://") && !s.startsWith("postgres://")) {
     throw new Error(
-      `Database URL must use scheme postgresql:// or postgres:// (got: ${s.slice(0, 20)}...). ` +
-        "For Lakebase use a PostgreSQL connection string; do not use prisma+postgres:// here."
+      `Database URL ${s}must use scheme postgresql:// or postgres:// (got: ${s.slice(0, 20)}...). ` +
+        "For Lakebase use a PostgreSQL connection string; do not use prisma+postgres:// here"
     );
   }
   // Lakebase requires sslmode=require; without it you get P1010 "denied access" / "(not available)"
