@@ -67,8 +67,13 @@ jobs:
           BRANCH_ID="${BRANCH_ID//[^a-zA-Z0-9-]/}"
           [ -z "$BRANCH_ID" ] && BRANCH_ID="preview"
           echo "branch_id=${BRANCH_ID}" >> $GITHUB_OUTPUT
-          cp scripts/lakebase-feature-branch.sh /tmp/ && (cd /tmp && bash lakebase-feature-branch.sh "$PROJECT_ID" "$PROD_BRANCH_ID" "$BRANCH_ID") || true
+          if [ -n "$PROJECT_ID" ] && [ -n "$PROD_BRANCH_ID" ]; then
+            cp scripts/lakebase-feature-branch.sh /tmp/ && (cd /tmp && bash lakebase-feature-branch.sh "$PROJECT_ID" "$PROD_BRANCH_ID" "$BRANCH_ID") || echo "Lakebase branch step skipped or failed (API may be unavailable in this workspace)."
+          else
+            echo "Skipping Lakebase branch: PROJECT_ID or PROD_BRANCH_ID not set."
+          fi
           echo "branch_resource=projects/$PROJECT_ID/branches/$BRANCH_ID" >> $GITHUB_OUTPUT
+        continue-on-error: true
 
       - name: Resolve Lakebase DB URL for preview
         id: db_url

@@ -19,27 +19,23 @@ ENDPOINT_ID="primary"
 echo "Creating Lakebase branch ${FEATURE_BRANCH_ID} from ${PROD_BRANCH_ID}..."
 
 # Create branch from production (copy-on-write)
-if ! databricks postgres get-branch "${BRANCH_RESOURCE}" 2>/dev/null; then
-  databricks postgres create-branch "${PROJECT_ID}" "${FEATURE_BRANCH_ID}" \
-    --json "{\"spec\":{\"source_branch\":\"${SOURCE_BRANCH}\",\"no_expiry\":true}}"
-  echo "Branch ${FEATURE_BRANCH_ID} created."
-else
-  echo "Branch ${FEATURE_BRANCH_ID} already exists."
-fi
+
+databricks postgres create-branch -p e2-demo-field-eng "${PROJECT_RESOURCE}" "${FEATURE_BRANCH_ID}" \
+    --json "{\"spec\":{\"no_expiry\":true}}"
+echo "Branch ${FEATURE_BRANCH_ID} created."
+
 
 # Create read-write endpoint on the feature branch (required for app to connect)
 ENDPOINT_RESOURCE="${BRANCH_RESOURCE}/endpoints/${ENDPOINT_ID}"
-if ! databricks postgres get-endpoint "${ENDPOINT_RESOURCE}" 2>/dev/null; then
-  databricks postgres create-endpoint "${PROJECT_ID}" "${FEATURE_BRANCH_ID}" "${ENDPOINT_ID}" \
+
+  databricks postgres create-endpoint -p e2-demo-field-eng "${BRANCH_RESOURCE}" "${FEATURE_BRANCH_ID}" \
     --json '{"spec":{"endpoint_type":"ENDPOINT_TYPE_READ_WRITE","autoscaling_limit_min_cu":0.5,"autoscaling_limit_max_cu":2.0}}'
   echo "Endpoint ${ENDPOINT_ID} created on branch ${FEATURE_BRANCH_ID}."
-else
-  echo "Endpoint ${ENDPOINT_ID} already exists on branch ${FEATURE_BRANCH_ID}."
-fi
+
 
 echo ""
 echo "Lakebase branch ready: ${BRANCH_RESOURCE}"
 echo "Endpoint: ${ENDPOINT_RESOURCE}"
 echo "To get DATABASE_URL, run:"
-echo "  databricks postgres generate-database-credential ${ENDPOINT_RESOURCE}"
+echo "  databricks postgres generate-database-credential ${ENDPOINT_RESOURCE} -p e2-demo-field-eng"
 echo "Then run Prisma migrations against this DB: DATABASE_URL=<url> npx prisma migrate deploy"
