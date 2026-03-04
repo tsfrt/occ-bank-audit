@@ -26,6 +26,46 @@ const statusLabels: Record<string, string> = {
   manual_review: "Manual review",
 };
 
+function MetricCard({
+  label,
+  value,
+  sublabel,
+  accent,
+}: {
+  label: string;
+  value: string | number;
+  sublabel?: string;
+  accent?: "default" | "muted" | "emphasis";
+}) {
+  const accentStyles = {
+    default:
+      "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80",
+    muted:
+      "border-zinc-100 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-800/50",
+    emphasis:
+      "border-zinc-300 dark:border-zinc-600 bg-zinc-100/90 dark:bg-zinc-700/50",
+  };
+  return (
+    <div
+      className={
+        "rounded-lg border px-4 py-3 min-w-0 " + (accentStyles[accent ?? "default"])
+      }
+    >
+      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400 truncate">
+        {label}
+      </p>
+      <p className="mt-0.5 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+        {value}
+      </p>
+      {sublabel && (
+        <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+          {sublabel}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function CaseSummaryBar() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,9 +90,19 @@ export function CaseSummaryBar() {
 
   if (loading) {
     return (
-      <div className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/80 dark:bg-zinc-800/50 px-4 py-2">
-        <div className="max-w-7xl mx-auto flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
-          Loading workload summary…
+      <div className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/80 dark:bg-zinc-800/50 px-4 py-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="animate-pulse flex flex-wrap gap-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className="h-20 w-32 rounded-lg bg-zinc-200 dark:bg-zinc-700"
+              />
+            ))}
+          </div>
+          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+            Loading workload analytics…
+          </p>
         </div>
       </div>
     );
@@ -60,8 +110,8 @@ export function CaseSummaryBar() {
 
   if (!summary || summary.error) {
     return (
-      <div className="border-b border-zinc-200 dark:border-zinc-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-2">
-        <div className="max-w-7xl mx-auto text-sm text-amber-800 dark:text-amber-200">
+      <div className="border-b border-zinc-200 dark:border-zinc-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-4">
+        <div className="max-w-7xl mx-auto rounded-lg border border-amber-200 dark:border-amber-800 bg-white dark:bg-zinc-900 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
           Summary unavailable. {summary?.error ?? "Could not load data."}
         </div>
       </div>
@@ -69,72 +119,96 @@ export function CaseSummaryBar() {
   }
 
   const { total, byStatus, trends, analytics } = summary;
+  const hasAnalytics =
+    analytics.avgRiskScore != null || analytics.avgAiConfidencePercent != null;
 
   return (
-    <div className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/95 px-4 py-3 shadow-sm">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-          <Link
-            href="/"
-            className="font-medium text-zinc-900 dark:text-zinc-100 hover:underline"
-          >
-            Workload summary
-          </Link>
-          <span className="text-zinc-400 dark:text-zinc-500">|</span>
-          <span className="text-zinc-600 dark:text-zinc-300">
-            <strong className="text-zinc-900 dark:text-zinc-100">{total}</strong>{" "}
-            total cases
-          </span>
-          {(["pending_analysis", "pending_review", "manual_review", "reviewed"] as const).map(
-            (status) => (
-              <span key={status} className="text-zinc-600 dark:text-zinc-300">
-                <strong className="text-zinc-900 dark:text-zinc-100">
-                  {byStatus[status] ?? 0}
-                </strong>{" "}
-                {statusLabels[status]}
-              </span>
-            )
-          )}
-          <span className="text-zinc-400 dark:text-zinc-500">|</span>
-          <span className="text-zinc-600 dark:text-zinc-300" title="Last 7 days">
-            <strong className="text-zinc-900 dark:text-zinc-100">
-              {trends.casesCreatedLast7Days}
-            </strong>{" "}
-            new (7d)
-          </span>
-          <span className="text-zinc-600 dark:text-zinc-300" title="Last 30 days">
-            <strong className="text-zinc-900 dark:text-zinc-100">
-              {trends.casesCreatedLast30Days}
-            </strong>{" "}
-            new (30d)
-          </span>
-          <span className="text-zinc-600 dark:text-zinc-300" title="Analyses run in last 7 days">
-            <strong className="text-zinc-900 dark:text-zinc-100">
-              {trends.analysesRunLast7Days}
-            </strong>{" "}
-            analyses (7d)
-          </span>
-          {(analytics.avgRiskScore != null || analytics.avgAiConfidencePercent != null) && (
-            <>
-              <span className="text-zinc-400 dark:text-zinc-500">|</span>
-              <span className="text-zinc-600 dark:text-zinc-300">
-                Avg risk:{" "}
-                <strong className="text-zinc-900 dark:text-zinc-100">
-                  {analytics.avgRiskScore ?? "—"}
-                </strong>
-              </span>
-              <span className="text-zinc-600 dark:text-zinc-300">
-                Avg AI confidence:{" "}
-                <strong className="text-zinc-900 dark:text-zinc-100">
-                  {analytics.avgAiConfidencePercent != null
-                    ? `${analytics.avgAiConfidencePercent}%`
-                    : "—"}
-                </strong>{" "}
-                ({analytics.casesWithScores} cases)
-              </span>
-            </>
-          )}
+    <div className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/95 px-4 py-4 shadow-sm">
+      <div className="max-w-7xl mx-auto space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+            <Link
+              href="/"
+              className="hover:text-zinc-900 dark:hover:text-zinc-100 hover:underline"
+            >
+              Workload analytics
+            </Link>
+          </h2>
         </div>
+
+        {/* Primary metric + status breakdown */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          <div className="col-span-2 sm:col-span-1">
+            <MetricCard
+              label="Total cases"
+              value={total}
+              accent="emphasis"
+            />
+          </div>
+          {(
+            [
+              "pending_analysis",
+              "pending_review",
+              "manual_review",
+              "reviewed",
+            ] as const
+          ).map((status) => (
+            <MetricCard
+              key={status}
+              label={statusLabels[status]}
+              value={byStatus[status] ?? 0}
+              accent="default"
+            />
+          ))}
+        </div>
+
+        {/* Trends row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <MetricCard
+            label="New cases (7d)"
+            value={trends.casesCreatedLast7Days}
+            sublabel="Last 7 days"
+            accent="muted"
+          />
+          <MetricCard
+            label="New cases (30d)"
+            value={trends.casesCreatedLast30Days}
+            sublabel="Last 30 days"
+            accent="muted"
+          />
+          <MetricCard
+            label="Analyses run (7d)"
+            value={trends.analysesRunLast7Days}
+            sublabel="Completed in last 7 days"
+            accent="muted"
+          />
+        </div>
+
+        {/* Analytics row (risk & AI confidence) */}
+        {hasAnalytics && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <MetricCard
+              label="Avg risk score"
+              value={analytics.avgRiskScore ?? "—"}
+              accent="default"
+            />
+            <MetricCard
+              label="Avg AI confidence"
+              value={
+                analytics.avgAiConfidencePercent != null
+                  ? `${analytics.avgAiConfidencePercent}%`
+                  : "—"
+              }
+              accent="default"
+            />
+            <MetricCard
+              label="Cases with scores"
+              value={analytics.casesWithScores}
+              sublabel="With risk & confidence data"
+              accent="default"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
