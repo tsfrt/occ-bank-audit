@@ -39,6 +39,7 @@ async function main() {
         bankName: "First Regional Bank",
         reference: `${SEED_REF_PREFIX}pending-analysis-1`,
         status: "pending_analysis",
+        auditType: "bank_statement_analysis",
       },
     }),
     prisma.auditCase.create({
@@ -47,6 +48,7 @@ async function main() {
         bankName: "Metro Credit Union",
         reference: `${SEED_REF_PREFIX}pending-analysis-2`,
         status: "pending_analysis",
+        auditType: "meeting_minute_analysis",
       },
     }),
     prisma.auditCase.create({
@@ -55,6 +57,7 @@ async function main() {
         bankName: "Valley Savings & Loan",
         reference: `${SEED_REF_PREFIX}pending-analysis-3`,
         status: "pending_analysis",
+        auditType: "financial_document_analysis",
       },
     }),
   ]);
@@ -68,10 +71,12 @@ async function main() {
         bankName: "Northern Trust Co",
         reference: `${SEED_REF_PREFIX}pending-review-1`,
         status: "pending_review",
+        auditType: "regulatory_compliance_review",
         riskScore: 0.35,
         aiConfidence: 0.88,
         analyses: {
           create: {
+            auditType: "regulatory_compliance_review",
             riskScore: 0.35,
             aiConfidence: 0.88,
             modelEndpoint: "audit-analysis",
@@ -86,10 +91,12 @@ async function main() {
         bankName: "Pacific Commerce Bank",
         reference: `${SEED_REF_PREFIX}pending-review-2`,
         status: "pending_review",
+        auditType: "loan_portfolio_analysis",
         riskScore: 0.72,
         aiConfidence: 0.91,
         analyses: {
           create: {
+            auditType: "loan_portfolio_analysis",
             riskScore: 0.72,
             aiConfidence: 0.91,
             modelEndpoint: "audit-analysis",
@@ -104,10 +111,12 @@ async function main() {
         bankName: "Central Federal Bank",
         reference: `${SEED_REF_PREFIX}pending-review-3`,
         status: "pending_review",
+        auditType: "transaction_monitoring",
         riskScore: 0.18,
         aiConfidence: 0.95,
         analyses: {
           create: {
+            auditType: "transaction_monitoring",
             riskScore: 0.18,
             aiConfidence: 0.95,
             modelEndpoint: "audit-analysis",
@@ -127,12 +136,14 @@ async function main() {
         bankName: "Heritage National Bank",
         reference: `${SEED_REF_PREFIX}reviewed-1`,
         status: "reviewed",
+        auditType: "internal_control_review",
         riskScore: 0.22,
         aiConfidence: 0.92,
         reviewedAt: new Date(),
         reviewedBy: "analyst@example.com",
         analyses: {
           create: {
+            auditType: "internal_control_review",
             riskScore: 0.22,
             aiConfidence: 0.92,
             modelEndpoint: "audit-analysis",
@@ -154,12 +165,14 @@ async function main() {
         bankName: "Summit Community Bank",
         reference: `${SEED_REF_PREFIX}reviewed-2`,
         status: "reviewed",
+        auditType: "liquidity_risk_assessment",
         riskScore: 0.41,
         aiConfidence: 0.87,
         reviewedAt: new Date(),
         reviewedBy: "analyst@example.com",
         analyses: {
           create: {
+            auditType: "liquidity_risk_assessment",
             riskScore: 0.41,
             aiConfidence: 0.87,
             modelEndpoint: "audit-analysis",
@@ -186,12 +199,14 @@ async function main() {
         bankName: "Riverside Commercial Bank",
         reference: `${SEED_REF_PREFIX}manual-review-1`,
         status: "manual_review",
+        auditType: "bank_statement_analysis",
         riskScore: 0.78,
         aiConfidence: 0.65,
         reviewedAt: new Date(),
         reviewedBy: "senior.analyst@example.com",
         analyses: {
           create: {
+            auditType: "bank_statement_analysis",
             riskScore: 0.78,
             aiConfidence: 0.65,
             modelEndpoint: "audit-analysis",
@@ -213,12 +228,14 @@ async function main() {
         bankName: "Gateway Financial Corp",
         reference: `${SEED_REF_PREFIX}manual-review-2`,
         status: "manual_review",
+        auditType: "financial_document_analysis",
         riskScore: 0.85,
         aiConfidence: 0.71,
         reviewedAt: new Date(),
         reviewedBy: "senior.analyst@example.com",
         analyses: {
           create: {
+            auditType: "financial_document_analysis",
             riskScore: 0.85,
             aiConfidence: 0.71,
             modelEndpoint: "audit-analysis",

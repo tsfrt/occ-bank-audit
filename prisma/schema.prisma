@@ -22,11 +22,23 @@ enum CaseReviewAction {
   dig_deeper
 }
 
+enum AuditType {
+  meeting_minute_analysis
+  bank_statement_analysis
+  financial_document_analysis
+  regulatory_compliance_review
+  loan_portfolio_analysis
+  transaction_monitoring
+  internal_control_review
+  liquidity_risk_assessment
+}
+
 model AuditCase {
   id          String   @id @default(cuid())
   bankId      String   @map("bank_id")
   bankName    String?  @map("bank_name")
   reference   String?  // external reference
+  auditType   AuditType? @map("audit_type") // set before analysis; drives model endpoint
   status      AuditCaseStatus @default(pending_analysis)
   riskScore   Float?   @map("risk_score")   // from latest analysis
   aiConfidence Float?  @map("ai_confidence") // 0-1 or 0-100 from latest analysis
@@ -45,13 +57,14 @@ model AuditCase {
 }
 
 model CaseAnalysis {
-  id              String   @id @default(cuid())
-  caseId          String   @map("case_id")
-  riskScore       Float    @map("risk_score")
-  aiConfidence    Float    @map("ai_confidence") // 0-1 or 0-100
-  modelEndpoint   String?  @map("model_endpoint")
-  rawPayload      Json?    @map("raw_payload")   // full model response for audit
-  completedAt     DateTime @default(now()) @map("completed_at")
+  id              String    @id @default(cuid())
+  caseId          String    @map("case_id")
+  auditType       AuditType? @map("audit_type")  // audit type used for this run
+  riskScore       Float     @map("risk_score")
+  aiConfidence    Float     @map("ai_confidence") // 0-1 or 0-100
+  modelEndpoint   String?   @map("model_endpoint")
+  rawPayload      Json?     @map("raw_payload")   // full model response for audit
+  completedAt     DateTime  @default(now()) @map("completed_at")
 
   case AuditCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { AUDIT_TYPE_LABELS } from "@/lib/auditTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,9 @@ export default async function HomePage() {
                     Bank / Reference
                   </th>
                   <th className="px-4 py-3 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    Audit type
+                  </th>
+                  <th className="px-4 py-3 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-4 py-3 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
@@ -87,6 +91,9 @@ export default async function HomePage() {
                           {c.reference}
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400">
+                      {c.auditType ? AUDIT_TYPE_LABELS[c.auditType] : "—"}
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200">
