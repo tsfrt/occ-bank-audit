@@ -11,7 +11,7 @@ const statusLabels: Record<string, string> = {
   manual_review: "Manual review",
 };
 
-export default async function HomePage() {
+export default async function DashboardPage() {
   let cases: Awaited<ReturnType<typeof prisma.auditCase.findMany>> = [];
   try {
     cases = await prisma.auditCase.findMany({

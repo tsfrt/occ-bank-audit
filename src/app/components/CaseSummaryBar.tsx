@@ -128,7 +128,7 @@ export function CaseSummaryBar() {
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
             <Link
-              href="/"
+              href="/dashboard"
               className="hover:text-zinc-900 dark:hover:text-zinc-100 hover:underline"
             >
               Workload analytics
