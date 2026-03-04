@@ -8,6 +8,7 @@ function getDatabaseUrl(): string {
   const url =
     process.env.LAKEBASE_DATABASE_URL ?? process.env.DATABASE_URL ?? "";
   const s = url.trim();
+  console.log("s", s);
   if (!s) {
     throw new Error(
       "LAKEBASE_DATABASE_URL or DATABASE_URL must be set for the database connection"
