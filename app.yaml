@@ -3,7 +3,7 @@
 command:
   - sh
   - -c
-  - "npm ci && npx prisma generate && npm run build && npm run start"
+  - "npm ci && npm run build && npm run start"
 
 env:
   - name: DATABASE_URL
