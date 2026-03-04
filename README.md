@@ -1,6 +1,6 @@
 # Bank Audit Analyst UI
 
-Office of the Comptroller – analyst UI for managing bank audits as cases, with automated AI analysis via Databricks model serving, risk and AI confidence scores, and review workflows (mark as reviewed / dig deeper).
+Office of the Comptroller – analyst UI for managing bank audits as cases, with automated AI analysis via Databricks model serving, risk and AI confidence scores, and review workflows (mark as reviewed / manual review required).
 
 ## Stack
 

@@ -120,7 +120,7 @@ export default async function CaseDetailPage({
                   className="flex justify-between text-sm py-2 border-b border-zinc-100 dark:border-zinc-800 last:border-0"
                 >
                   <span>
-                    {r.action === "reviewed" ? "Marked reviewed" : "Dig deeper"}
+                    {r.action === "reviewed" ? "Marked reviewed" : "Manual review required"}
                     {r.reviewedBy && ` by ${r.reviewedBy}`}
                   </span>
                   <span className="text-zinc-500 dark:text-zinc-400">

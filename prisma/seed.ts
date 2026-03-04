@@ -178,7 +178,7 @@ async function main() {
   ]);
   console.log(`Created ${reviewed.length} case(s) in reviewed.`);
 
-  // --- Manual review (dig deeper) ---
+  // --- Manual review required ---
   const manualReview = await Promise.all([
     prisma.auditCase.create({
       data: {

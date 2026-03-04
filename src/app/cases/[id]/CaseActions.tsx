@@ -101,7 +101,7 @@ export function CaseActions({ caseId, status }: Props) {
             disabled={digging}
             className="rounded-md border border-amber-500 text-amber-700 dark:text-amber-400 px-4 py-2 text-sm font-medium hover:bg-amber-50 dark:hover:bg-amber-900/20 disabled:opacity-50"
           >
-            {digging ? "Updating…" : "Dig deeper (manual review)"}
+            {digging ? "Updating…" : "Manual review required"}
           </button>
         )}
       </div>
