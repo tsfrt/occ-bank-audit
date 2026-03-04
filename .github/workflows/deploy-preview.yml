@@ -1,15 +1,16 @@
-# Deploy preview app for feature branches via the asset bundle.
-# The bundle (databricks.yml) defines the app with secret resource and config; app_name and secret_key are passed per run.
+# Deploy preview app for open PRs against main (and pushes to non-main branches).
+# Runs on: PR opened/updated/reopened targeting main → preview app per PR (e.g. bank-audit-analyst-pr-5).
 # Vars: DATABRICKS_WORKSPACE_USER (workspace user path segment for bundle root_path).
 
 name: Deploy Preview
 
 on:
-  push:
-    branches-ignore:
-      - main
   pull_request:
     branches:
+      - main
+    types: [opened, synchronize, reopened]
+  push:
+    branches-ignore:
       - main
 
 env:
