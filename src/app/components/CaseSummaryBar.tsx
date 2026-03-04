@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+const STORAGE_KEY = "occ-workload-analytics-collapsed";
+
 type Summary = {
   total: number;
   byStatus: Record<string, number>;
@@ -66,9 +68,24 @@ function MetricCard({
   );
 }
 
+function getStoredCollapsed(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const v = localStorage.getItem(STORAGE_KEY);
+    return v === "true";
+  } catch {
+    return false;
+  }
+}
+
 export function CaseSummaryBar() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    setCollapsed(getStoredCollapsed());
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,21 +105,26 @@ export function CaseSummaryBar() {
     };
   }, []);
 
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(STORAGE_KEY, String(next));
+      } catch {}
+      return next;
+    });
+  };
+
   if (loading) {
     return (
-      <div className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/80 dark:bg-zinc-800/50 px-4 py-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse flex flex-wrap gap-4">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div
-                key={i}
-                className="h-20 w-32 rounded-lg bg-zinc-200 dark:bg-zinc-700"
-              />
-            ))}
-          </div>
-          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-            Loading workload analytics…
-          </p>
+      <div className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/80 dark:bg-zinc-800/50 px-4 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+            Workload analytics
+          </span>
+          <span className="text-sm text-zinc-500 dark:text-zinc-400">
+            Loading…
+          </span>
         </div>
       </div>
     );
@@ -123,91 +145,112 @@ export function CaseSummaryBar() {
     analytics.avgRiskScore != null || analytics.avgAiConfidencePercent != null;
 
   return (
-    <div className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/95 px-4 py-4 shadow-sm">
+    <div className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/95 px-4 py-2 shadow-sm">
       <div className="max-w-7xl mx-auto space-y-4">
-        <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          className="flex w-full items-center justify-between gap-2 rounded-md py-2 text-left hover:bg-zinc-100/80 dark:hover:bg-zinc-800/50 -mx-2 px-2 transition-colors"
+          aria-expanded={!collapsed}
+        >
           <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
             <Link
               href="/dashboard"
+              onClick={(e) => e.stopPropagation()}
               className="hover:text-zinc-900 dark:hover:text-zinc-100 hover:underline"
             >
               Workload analytics
             </Link>
+            {collapsed && (
+              <span className="ml-2 font-normal text-zinc-500 dark:text-zinc-400">
+                · {total} cases
+              </span>
+            )}
           </h2>
-        </div>
+          <span
+            className="shrink-0 text-zinc-500 dark:text-zinc-400 transition-transform"
+            style={{ transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
+            aria-hidden
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </span>
+        </button>
 
-        {/* Primary metric + status breakdown */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-          <div className="col-span-2 sm:col-span-1">
-            <MetricCard
-              label="Total cases"
-              value={total}
-              accent="emphasis"
-            />
-          </div>
-          {(
-            [
-              "pending_analysis",
-              "pending_review",
-              "manual_review",
-              "reviewed",
-            ] as const
-          ).map((status) => (
-            <MetricCard
-              key={status}
-              label={statusLabels[status]}
-              value={byStatus[status] ?? 0}
-              accent="default"
-            />
-          ))}
-        </div>
+        {!collapsed && (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+              <div className="col-span-2 sm:col-span-1">
+                <MetricCard
+                  label="Total cases"
+                  value={total}
+                  accent="emphasis"
+                />
+              </div>
+              {(
+                [
+                  "pending_analysis",
+                  "pending_review",
+                  "manual_review",
+                  "reviewed",
+                ] as const
+              ).map((status) => (
+                <MetricCard
+                  key={status}
+                  label={statusLabels[status]}
+                  value={byStatus[status] ?? 0}
+                  accent="default"
+                />
+              ))}
+            </div>
 
-        {/* Trends row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <MetricCard
-            label="New cases (7d)"
-            value={trends.casesCreatedLast7Days}
-            sublabel="Last 7 days"
-            accent="muted"
-          />
-          <MetricCard
-            label="New cases (30d)"
-            value={trends.casesCreatedLast30Days}
-            sublabel="Last 30 days"
-            accent="muted"
-          />
-          <MetricCard
-            label="Analyses run (7d)"
-            value={trends.analysesRunLast7Days}
-            sublabel="Completed in last 7 days"
-            accent="muted"
-          />
-        </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <MetricCard
+                label="New cases (7d)"
+                value={trends.casesCreatedLast7Days}
+                sublabel="Last 7 days"
+                accent="muted"
+              />
+              <MetricCard
+                label="New cases (30d)"
+                value={trends.casesCreatedLast30Days}
+                sublabel="Last 30 days"
+                accent="muted"
+              />
+              <MetricCard
+                label="Analyses run (7d)"
+                value={trends.analysesRunLast7Days}
+                sublabel="Completed in last 7 days"
+                accent="muted"
+              />
+            </div>
 
-        {/* Analytics row (risk & AI confidence) */}
-        {hasAnalytics && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            <MetricCard
-              label="Avg risk score"
-              value={analytics.avgRiskScore ?? "—"}
-              accent="default"
-            />
-            <MetricCard
-              label="Avg AI confidence"
-              value={
-                analytics.avgAiConfidencePercent != null
-                  ? `${analytics.avgAiConfidencePercent}%`
-                  : "—"
-              }
-              accent="default"
-            />
-            <MetricCard
-              label="Cases with scores"
-              value={analytics.casesWithScores}
-              sublabel="With risk & confidence data"
-              accent="default"
-            />
-          </div>
+            {hasAnalytics && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <MetricCard
+                  label="Avg risk score"
+                  value={analytics.avgRiskScore ?? "—"}
+                  accent="default"
+                />
+                <MetricCard
+                  label="Avg AI confidence"
+                  value={
+                    analytics.avgAiConfidencePercent != null
+                      ? `${analytics.avgAiConfidencePercent}%`
+                      : "—"
+                  }
+                  accent="default"
+                />
+                <MetricCard
+                  label="Cases with scores"
+                  value={analytics.casesWithScores}
+                  sublabel="With risk & confidence data"
+                  accent="default"
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
