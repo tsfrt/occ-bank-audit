@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { isValidAuditType } from "@/lib/auditTypes";
+import type { AuditType } from "@/generated/prisma";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -36,19 +38,22 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  let body: { bankId: string; bankName?: string; reference?: string };
+  let body: { bankId: string; bankName?: string; reference?: string; auditType?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { bankId, bankName, reference } = body;
+  const { bankId, bankName, reference, auditType } = body;
   if (!bankId || typeof bankId !== "string") {
     return NextResponse.json(
       { error: "bankId is required" },
       { status: 400 }
     );
+  }
+  if (auditType !== undefined && auditType !== null && auditType !== "" && !isValidAuditType(auditType)) {
+    return NextResponse.json({ error: "Invalid audit type" }, { status: 400 });
   }
 
   const auditCase = await prisma.auditCase.create({
@@ -56,6 +61,7 @@ export async function POST(request: NextRequest) {
       bankId,
       bankName: bankName ?? null,
       reference: reference ?? null,
+      auditType: auditType && isValidAuditType(auditType) ? (auditType as AuditType) : null,
       status: "pending_analysis",
     },
   });

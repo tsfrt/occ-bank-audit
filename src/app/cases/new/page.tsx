@@ -3,12 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
+import { AUDIT_TYPES } from "@/lib/auditTypes";
+import type { AuditType } from "@/generated/prisma";
 
 export default function NewCasePage() {
   const router = useRouter();
   const [bankId, setBankId] = useState("");
   const [bankName, setBankName] = useState("");
   const [reference, setReference] = useState("");
+  const [auditType, setAuditType] = useState<AuditType | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,6 +27,7 @@ export default function NewCasePage() {
           bankId: bankId.trim(),
           bankName: bankName.trim() || undefined,
           reference: reference.trim() || undefined,
+          auditType: auditType || undefined,
         }),
       });
       const data = await res.json();
@@ -94,6 +98,25 @@ export default function NewCasePage() {
               onChange={(e) => setReference(e.target.value)}
               className="w-full rounded-md border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100"
             />
+          </div>
+          <div>
+            <label htmlFor="auditType" className="block text-sm font-medium mb-1">
+              Audit type *
+            </label>
+            <select
+              id="auditType"
+              required
+              value={auditType}
+              onChange={(e) => setAuditType((e.target.value || "") as AuditType | "")}
+              className="w-full rounded-md border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100"
+            >
+              <option value="">Select audit type…</option>
+              {AUDIT_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="flex gap-3 pt-2">
             <button
