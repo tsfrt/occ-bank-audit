@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isValidAuditType } from "@/lib/auditTypes";
+import type { AuditType } from "@/generated/prisma";
 
 export async function GET(
   _request: NextRequest,
@@ -49,7 +50,7 @@ export async function PATCH(
     status?: (typeof body)["status"];
     reviewedAt?: Date | null;
     reviewedBy?: string | null;
-    auditType?: string | null;
+    auditType?: AuditType | null;
   } = {};
 
   if (body.status) data.status = body.status;
@@ -60,7 +61,7 @@ export async function PATCH(
     } else if (!isValidAuditType(body.auditType)) {
       return NextResponse.json({ error: "Invalid audit type" }, { status: 400 });
     } else {
-      data.auditType = body.auditType;
+      data.auditType = body.auditType as AuditType;
     }
   }
   if (body.status === "reviewed" || body.status === "manual_review") {
