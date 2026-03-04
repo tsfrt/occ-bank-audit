@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { AUDIT_TYPE_LABELS } from "@/lib/auditTypes";
 import { CaseActions } from "./CaseActions";
 
 const statusLabels: Record<string, string> = {
@@ -65,6 +66,14 @@ export default async function CaseDetailPage({
               </dd>
             </div>
             <div>
+              <dt className="text-xs text-zinc-500 dark:text-zinc-400">Audit type</dt>
+              <dd className="mt-0.5 font-medium">
+                {auditCase.auditType
+                  ? AUDIT_TYPE_LABELS[auditCase.auditType]
+                  : <span className="text-zinc-400">—</span>}
+              </dd>
+            </div>
+            <div>
               <dt className="text-xs text-zinc-500 dark:text-zinc-400">
                 Risk score
               </dt>
@@ -105,7 +114,7 @@ export default async function CaseDetailPage({
           <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">
             Actions
           </h2>
-          <CaseActions caseId={auditCase.id} status={auditCase.status} />
+          <CaseActions caseId={auditCase.id} status={auditCase.status} currentAuditType={auditCase.auditType} />
         </section>
 
         {auditCase.reviews.length > 0 && (

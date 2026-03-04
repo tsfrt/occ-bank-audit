@@ -1,8 +1,12 @@
 /**
  * Audit analysis via Databricks model serving endpoint.
  * Maps case context to request and response to riskScore + aiConfidenceScore.
+ * Audit type drives which model endpoint is used.
  * https://docs.databricks.com/en/machine-learning/model-serving/score-custom-model-endpoints.html
  */
+
+import type { AuditType } from "@/generated/prisma";
+import { getEndpointNameForAuditType } from "@/lib/auditTypes";
 
 const INVOCATIONS_PATH = "/api/2.0/serving-endpoints";
 
@@ -11,6 +15,8 @@ export type AuditAnalysisInput = {
   bankId: string;
   bankName?: string | null;
   reference?: string | null;
+  /** Audit type drives analysis style and model endpoint selection */
+  auditType?: AuditType | null;
 };
 
 export type AuditAnalysisResult = {
@@ -28,19 +34,24 @@ export async function runAuditAnalysis(
 ): Promise<AuditAnalysisResult> {
   const host = process.env.DATABRICKS_HOST;
   const token = process.env.DATABRICKS_TOKEN;
-  const endpointName = process.env.MODEL_SERVING_ENDPOINT_NAME;
+  const endpointName = getEndpointNameForAuditType(input.auditType);
 
-  if (!host || !token || !endpointName) {
+  if (!host || !token) {
     throw new Error(
-      "DATABRICKS_HOST, DATABRICKS_TOKEN, and MODEL_SERVING_ENDPOINT_NAME must be set"
+      "DATABRICKS_HOST and DATABRICKS_TOKEN must be set"
+    );
+  }
+  if (!endpointName) {
+    throw new Error(
+      "Model endpoint could not be resolved; set MODEL_SERVING_ENDPOINT_NAME or MODEL_SERVING_ENDPOINT_<TYPE>"
     );
   }
 
   const url = `${host.replace(/\/$/, "")}${INVOCATIONS_PATH}/${endpointName}/invocations`;
 
-  // Standard payload shape; adjust to match your trained model's input schema
+  // Standard payload shape; audit_type can be used by the model for analysis style
   const body = {
-    inputs: [[input.bankId, input.bankName ?? "", input.reference ?? ""]],
+    inputs: [[input.bankId, input.bankName ?? "", input.reference ?? "", input.auditType ?? ""]],
     // Alternative: dataframe_split format if the endpoint expects it
     // dataframe_split: { columns: ['bank_id', 'bank_name', 'reference'], data: [[input.bankId, input.bankName ?? '', input.reference ?? '']] },
   };
