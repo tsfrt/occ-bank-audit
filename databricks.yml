@@ -22,6 +22,10 @@ variables:
   secret_key:
     description: Secret key in scope bank-audit-app for DATABASE_URL
     default: database-url-prod
+  # For preview: unique ID (e.g. pr-5) so multiple previews can coexist; pass via --var preview_id=pr-5
+  preview_id:
+    description: Preview deployment ID for root_path isolation (e.g. pr-5)
+    default: preview
 
 resources:
   apps:
@@ -54,11 +58,13 @@ targets:
       secret_key: database-url-prod
     workspace:
       host: https://e2-demo-field-eng.cloud.databricks.com/
+      # root_path: where bundle deploys app source in the workspace
       root_path: /Workspace/Users/${var.workspace_user}/.bundle/${bundle.name}/${bundle.target}
 
   preview:
     mode: development
-    # app_name and secret_key are passed via -v from the workflow (e.g. bank-audit-analyst-pr-5, database-url-pr-5)
+    # app_name, secret_key, preview_id passed via -v from workflow (preview_id = pr-5 for PRs)
     workspace:
       host: https://e2-demo-field-eng.cloud.databricks.com/
-      root_path: /Workspace/Users/${var.workspace_user}/.bundle/${bundle.name}/${bundle.target}
+      # root_path per preview_id so multiple previews coexist (e.g. .../preview/pr-5)
+      root_path: /Workspace/Users/${var.workspace_user}/.bundle/${bundle.name}/${bundle.target}/${var.preview_id}

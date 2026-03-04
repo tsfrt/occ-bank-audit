@@ -1,5 +1,5 @@
-# Deploy preview app for open PRs against main (and pushes to non-main branches).
-# Runs on: PR opened/updated/reopened targeting main → preview app per PR (e.g. bank-audit-analyst-pr-5).
+# Deploy preview app when a PR is opened against main or when changes are pushed to an open PR against main.
+# Triggers: opened (new PR), synchronize (new commits on PR), reopened (PR reopened).
 # Vars: DATABRICKS_WORKSPACE_USER (workspace user path segment for bundle root_path).
 
 name: Deploy Preview
@@ -9,9 +9,6 @@ on:
     branches:
       - main
     types: [opened, synchronize, reopened]
-  push:
-    branches-ignore:
-      - main
 
 env:
   NODE_VERSION: "20"
@@ -135,7 +132,8 @@ jobs:
             --var databricks_host=${{ secrets.DATABRICKS_HOST }} \
             --var workspace_user=${{ vars.DATABRICKS_WORKSPACE_USER }} \
             --var app_name=${{ steps.env.outputs.app_name }} \
-            --var secret_key=${{ steps.env.outputs.secret_key }}
+            --var secret_key=${{ steps.env.outputs.secret_key }} \
+            --var preview_id=${{ steps.env.outputs.deployment_env }}
         continue-on-error: true
 
       - name: Deploy app (preview)
@@ -144,22 +142,8 @@ jobs:
             --var databricks_host=${{ secrets.DATABRICKS_HOST }} \
             --var workspace_user=${{ vars.DATABRICKS_WORKSPACE_USER }} \
             --var app_name=${{ steps.env.outputs.app_name }} \
-            --var secret_key=${{ steps.env.outputs.secret_key }}
-        continue-on-error: true
-
-      - name: Sync app source to workspace (preview)
-        id: sync
-        env:
-          WORKSPACE_USER: ${{ vars.DATABRICKS_WORKSPACE_USER }}
-        run: |
-          SOURCE_PATH="/Workspace/Users/${WORKSPACE_USER}/apps/bank-audit-analyst/${{ steps.env.outputs.deployment_env }}"
-          databricks sync . "$SOURCE_PATH" --full --exclude-from .gitignore
-          echo "source_code_path=$SOURCE_PATH" >> "$GITHUB_OUTPUT"
-        continue-on-error: true
-
-      - name: Deploy app source (set source code path) (preview)
-        run: |
-          (cd /tmp && databricks apps deploy ${{ steps.env.outputs.app_name }} --source-code-path "${{ steps.sync.outputs.source_code_path }}")
+            --var secret_key=${{ steps.env.outputs.secret_key }} \
+            --var preview_id=${{ steps.env.outputs.deployment_env }}
         continue-on-error: true
 
       - name: Deploy app source and start app (bundle run, preview)
@@ -168,5 +152,6 @@ jobs:
             --var databricks_host=${{ secrets.DATABRICKS_HOST }} \
             --var workspace_user=${{ vars.DATABRICKS_WORKSPACE_USER }} \
             --var app_name=${{ steps.env.outputs.app_name }} \
-            --var secret_key=${{ steps.env.outputs.secret_key }}
+            --var secret_key=${{ steps.env.outputs.secret_key }} \
+            --var preview_id=${{ steps.env.outputs.deployment_env }}
         continue-on-error: true
