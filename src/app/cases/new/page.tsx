@@ -44,7 +44,7 @@ export default function NewCasePage() {
     <main className="max-w-lg mx-auto px-6 py-8">
       <div className="mb-6">
         <Link
-          href="/"
+          href="/dashboard"
           className="text-sm text-zinc-500 dark:text-zinc-400 hover:underline"
         >
           ← Back to cases
@@ -125,7 +125,7 @@ export default function NewCasePage() {
               {loading ? "Creating…" : "Create case"}
             </button>
             <Link
-              href="/"
+              href="/dashboard"
               className="rounded-md border border-zinc-300 dark:border-zinc-600 px-4 py-2 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800"
             >
               Cancel

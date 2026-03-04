@@ -155,7 +155,7 @@ export function CaseSummaryBar() {
         >
           <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
             <Link
-              href="/"
+              href="/dashboard"
               onClick={(e) => e.stopPropagation()}
               className="hover:text-zinc-900 dark:hover:text-zinc-100 hover:underline"
             >
