@@ -74,6 +74,24 @@ The bundle’s app resource references the secret via `resources[].secret` (scop
 
 **Branch protection**: Enforce that only approved PRs can merge into `main` (GitHub repo Settings → Branches → Branch protection rule for `main`).
 
+### Opening PRs and monitoring CI
+
+From a feature branch you can open a PR and watch the **Deploy Preview** workflow (build, validate, deploy) using the GitHub CLI:
+
+1. **Authenticate once** (required for `gh` to create PRs and read workflow runs):
+   ```bash
+   gh auth login
+   ```
+
+2. **Open a PR and watch the run** (creates the PR if none exists, then streams the workflow until it finishes; on failure, prints failed step logs):
+   ```bash
+   ./scripts/open-pr-and-watch-ci.sh
+   ```
+
+   To only create the PR and not watch: `./scripts/open-pr-and-watch-ci.sh --no-watch`.
+
+3. **Inspect failures**: If the run fails, the script prints the failed logs. Fix the issue, push to the same branch; the workflow re-runs on push. You can also run `gh run list --workflow=deploy-preview.yml` and `gh run view <run-id> --log-failed` manually.
+
 ## Troubleshooting
 
 ### P1010: User was denied access on the database `(not available)`
@@ -95,6 +113,7 @@ See [Lakebase connection strings](https://docs.databricks.com/aws/en/oltp/projec
 
 | Command        | Description                    |
 |----------------|--------------------------------|
+| `./scripts/open-pr-and-watch-ci.sh` | Open PR from current branch to `main` and watch Deploy Preview CI (requires `gh auth login`) |
 | `npm run dev`  | Start Next.js dev server       |
 | `npm run build`| Production build               |
 | `npm run start`| Start production server        |

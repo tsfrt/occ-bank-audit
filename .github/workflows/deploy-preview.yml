@@ -111,7 +111,6 @@ jobs:
           LAKEBASE_DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
           DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL || secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
         run: npm run build
-        continue-on-error: true
 
       - name: Create secret scope (if not exists)
         run: |
@@ -134,7 +133,6 @@ jobs:
             --var app_name=${{ steps.env.outputs.app_name }} \
             --var secret_key=${{ steps.env.outputs.secret_key }} \
             --var preview_id=${{ steps.env.outputs.deployment_env }}
-        continue-on-error: true
 
       - name: Deploy app (preview)
         run: |
@@ -144,7 +142,6 @@ jobs:
             --var app_name=${{ steps.env.outputs.app_name }} \
             --var secret_key=${{ steps.env.outputs.secret_key }} \
             --var preview_id=${{ steps.env.outputs.deployment_env }}
-        continue-on-error: true
 
       - name: Deploy app source and start app (bundle run, preview)
         run: |
@@ -154,4 +151,3 @@ jobs:
             --var app_name=${{ steps.env.outputs.app_name }} \
             --var secret_key=${{ steps.env.outputs.secret_key }} \
             --var preview_id=${{ steps.env.outputs.deployment_env }}
-        continue-on-error: true
