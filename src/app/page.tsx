@@ -25,17 +25,7 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
-      <header className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
-        <h1 className="text-xl font-semibold">
-          Bank Audit Analyst – Office of the Comptroller
-        </h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-          Manage audit cases, run AI analysis, and review outcomes
-        </p>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-6 py-8">
+    <main className="max-w-6xl mx-auto px-6 py-8">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-lg font-medium">Audit cases</h2>
           <Link
@@ -131,7 +121,6 @@ export default async function HomePage() {
             </table>
           </div>
         )}
-      </main>
-    </div>
+    </main>
   );
 }
