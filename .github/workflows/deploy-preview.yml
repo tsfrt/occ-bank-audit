@@ -102,7 +102,7 @@ jobs:
 
       - name: Skip Prisma migrations (no DB URL)
         if: steps.db_url.outputs.configured != '1'
-        run: echo "Skipping Prisma migrate deploy: no PREVIEW_DATABASE_URL, LAKEBASE_DATABASE_URL, or DATABASE_URL secret set."
+        run: 'echo "Skipping Prisma migrate deploy (no PREVIEW_DATABASE_URL, LAKEBASE_DATABASE_URL, or DATABASE_URL secret set)."'
 
       - name: Build Next.js app
         env:
