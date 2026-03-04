@@ -7,6 +7,6 @@ command:
 
 env:
   - name: DATABASE_URL
-    value_from: database_url
+    valueFrom: database_url
   - name: LAKEBASE_DATABASE_URL
-    value_from: database_url
+    valueFrom: database_url
