@@ -67,7 +67,7 @@ jobs:
           BRANCH_ID="${BRANCH_ID//[^a-zA-Z0-9-]/}"
           [ -z "$BRANCH_ID" ] && BRANCH_ID="preview"
           echo "branch_id=${BRANCH_ID}" >> $GITHUB_OUTPUT
-          ./scripts/lakebase-feature-branch.sh "$PROJECT_ID" "$PROD_BRANCH_ID" "$BRANCH_ID" || true
+          cp scripts/lakebase-feature-branch.sh /tmp/ && (cd /tmp && bash lakebase-feature-branch.sh "$PROJECT_ID" "$PROD_BRANCH_ID" "$BRANCH_ID") || true
           echo "branch_resource=projects/$PROJECT_ID/branches/$BRANCH_ID" >> $GITHUB_OUTPUT
 
       - name: Resolve Lakebase DB URL for preview
