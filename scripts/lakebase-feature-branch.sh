@@ -18,19 +18,24 @@ ENDPOINT_ID="primary"
 
 echo "Creating Lakebase branch ${FEATURE_BRANCH_ID} from ${PROD_BRANCH_ID}..."
 
-# Create branch from production (copy-on-write)
-
-databricks postgres create-branch -p e2-demo-field-eng "${PROJECT_RESOURCE}" "${FEATURE_BRANCH_ID}" \
+# Create branch from production (copy-on-write) if it does not already exist
+if ! databricks postgres get-branch -p e2-demo-field-eng "${BRANCH_RESOURCE}" &>/dev/null; then
+  databricks postgres create-branch -p e2-demo-field-eng "${PROJECT_RESOURCE}" "${FEATURE_BRANCH_ID}" \
     --json "{\"spec\":{\"no_expiry\":true}}"
-echo "Branch ${FEATURE_BRANCH_ID} created."
+  echo "Branch ${FEATURE_BRANCH_ID} created."
+else
+  echo "Branch ${FEATURE_BRANCH_ID} already exists."
+fi
 
-
-# Create read-write endpoint on the feature branch (required for app to connect)
+# Create read-write endpoint on the feature branch (required for app to connect) if it does not already exist
 ENDPOINT_RESOURCE="${BRANCH_RESOURCE}/endpoints/${ENDPOINT_ID}"
-
+if ! databricks postgres get-endpoint -p e2-demo-field-eng "${ENDPOINT_RESOURCE}" &>/dev/null; then
   databricks postgres create-endpoint -p e2-demo-field-eng "${BRANCH_RESOURCE}" "${FEATURE_BRANCH_ID}" \
     --json '{"spec":{"endpoint_type":"ENDPOINT_TYPE_READ_WRITE","autoscaling_limit_min_cu":0.5,"autoscaling_limit_max_cu":2.0}}'
   echo "Endpoint ${ENDPOINT_ID} created on branch ${FEATURE_BRANCH_ID}."
+else
+  echo "Endpoint ${ENDPOINT_ID} already exists on branch ${FEATURE_BRANCH_ID}."
+fi
 
 
 echo ""
