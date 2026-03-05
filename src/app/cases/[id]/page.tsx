@@ -33,10 +33,10 @@ export default async function CaseDetailPage({
   const latestAnalysis = auditCase.analyses[0];
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
-      <header className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
+    <main className="max-w-3xl mx-auto px-6 py-8 space-y-8">
+      <div className="border-b border-zinc-200 dark:border-zinc-800 pb-4">
         <Link
-          href="/"
+          href="/dashboard"
           className="text-sm text-zinc-500 dark:text-zinc-400 hover:underline"
         >
           ← Back to cases
@@ -49,9 +49,7 @@ export default async function CaseDetailPage({
             {auditCase.reference}
           </p>
         )}
-      </header>
-
-      <main className="max-w-3xl mx-auto px-6 py-8 space-y-8">
+      </div>
         <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
           <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">
             Case details
@@ -140,7 +138,6 @@ export default async function CaseDetailPage({
             </ul>
           </section>
         )}
-      </main>
-    </div>
+    </main>
   );
 }
