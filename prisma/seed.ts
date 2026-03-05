@@ -18,7 +18,27 @@ const prisma = new PrismaClient({ adapter });
 
 const SEED_REF_PREFIX = "SEED-";
 
+// Auditor IDs from migration (ensure seed auditors exist for seed cases)
+const SEED_AUDITOR_IDS = [
+  "cseed0000000000001", // Jane Smith
+  "cseed0000000000002", // John Doe
+  "cseed0000000000003", // Maria Garcia
+];
+
 async function main() {
+  // Ensure seed auditors exist (created by migration; upsert for dev re-seeds without migration)
+  const auditors = await prisma.auditor.findMany({ select: { id: true } });
+  if (auditors.length === 0) {
+    await prisma.auditor.createMany({
+      data: [
+        { id: SEED_AUDITOR_IDS[0], name: "Jane Smith", email: "jane.smith@example.com" },
+        { id: SEED_AUDITOR_IDS[1], name: "John Doe", email: "john.doe@example.com" },
+        { id: SEED_AUDITOR_IDS[2], name: "Maria Garcia", email: "maria.garcia@example.com" },
+      ],
+    });
+    console.log("Created 3 seed auditors.");
+  }
+
   // Remove previous seed data so re-runs are idempotent
   const existing = await prisma.auditCase.findMany({
     where: { reference: { startsWith: SEED_REF_PREFIX } },
@@ -40,6 +60,7 @@ async function main() {
         reference: `${SEED_REF_PREFIX}pending-analysis-1`,
         status: "pending_analysis",
         auditType: "bank_statement_analysis",
+        auditorId: SEED_AUDITOR_IDS[0],
       },
     }),
     prisma.auditCase.create({
@@ -49,6 +70,7 @@ async function main() {
         reference: `${SEED_REF_PREFIX}pending-analysis-2`,
         status: "pending_analysis",
         auditType: "meeting_minute_analysis",
+        auditorId: SEED_AUDITOR_IDS[1],
       },
     }),
     prisma.auditCase.create({
@@ -58,6 +80,7 @@ async function main() {
         reference: `${SEED_REF_PREFIX}pending-analysis-3`,
         status: "pending_analysis",
         auditType: "financial_document_analysis",
+        auditorId: SEED_AUDITOR_IDS[2],
       },
     }),
   ]);
@@ -74,6 +97,7 @@ async function main() {
         auditType: "regulatory_compliance_review",
         riskScore: 0.35,
         aiConfidence: 0.88,
+        auditorId: SEED_AUDITOR_IDS[0],
         analyses: {
           create: {
             auditType: "regulatory_compliance_review",
@@ -94,6 +118,7 @@ async function main() {
         auditType: "loan_portfolio_analysis",
         riskScore: 0.72,
         aiConfidence: 0.91,
+        auditorId: SEED_AUDITOR_IDS[1],
         analyses: {
           create: {
             auditType: "loan_portfolio_analysis",
@@ -114,6 +139,7 @@ async function main() {
         auditType: "transaction_monitoring",
         riskScore: 0.18,
         aiConfidence: 0.95,
+        auditorId: SEED_AUDITOR_IDS[2],
         analyses: {
           create: {
             auditType: "transaction_monitoring",
@@ -141,6 +167,7 @@ async function main() {
         aiConfidence: 0.92,
         reviewedAt: new Date(),
         reviewedBy: "analyst@example.com",
+        auditorId: SEED_AUDITOR_IDS[0],
         analyses: {
           create: {
             auditType: "internal_control_review",
@@ -170,6 +197,7 @@ async function main() {
         aiConfidence: 0.87,
         reviewedAt: new Date(),
         reviewedBy: "analyst@example.com",
+        auditorId: SEED_AUDITOR_IDS[1],
         analyses: {
           create: {
             auditType: "liquidity_risk_assessment",
@@ -204,6 +232,7 @@ async function main() {
         aiConfidence: 0.65,
         reviewedAt: new Date(),
         reviewedBy: "senior.analyst@example.com",
+        auditorId: SEED_AUDITOR_IDS[2],
         analyses: {
           create: {
             auditType: "bank_statement_analysis",
@@ -233,6 +262,7 @@ async function main() {
         aiConfidence: 0.71,
         reviewedAt: new Date(),
         reviewedBy: "senior.analyst@example.com",
+        auditorId: SEED_AUDITOR_IDS[0],
         analyses: {
           create: {
             auditType: "financial_document_analysis",

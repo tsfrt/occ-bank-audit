@@ -11,15 +11,19 @@ const statusLabels: Record<string, string> = {
   manual_review: "Manual review",
 };
 
+const casesQuery = () =>
+  prisma.auditCase.findMany({
+    orderBy: { updatedAt: "desc" },
+    include: {
+      analyses: { orderBy: { completedAt: "desc" }, take: 1 },
+      auditor: { select: { id: true, name: true, email: true } },
+    },
+  });
+
 export default async function DashboardPage() {
-  let cases: Awaited<ReturnType<typeof prisma.auditCase.findMany>> = [];
+  let cases: Awaited<ReturnType<typeof casesQuery>> = [];
   try {
-    cases = await prisma.auditCase.findMany({
-      orderBy: { updatedAt: "desc" },
-      include: {
-        analyses: { orderBy: { completedAt: "desc" }, take: 1 },
-      },
-    });
+    cases = await casesQuery();
   } catch (e) {
     console.error("Failed to load cases:", e);
   }
@@ -47,6 +51,9 @@ export default async function DashboardPage() {
                 <tr>
                   <th className="px-4 py-3 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                     Bank / Reference
+                  </th>
+                  <th className="px-4 py-3 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    Auditor
                   </th>
                   <th className="px-4 py-3 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                     Audit type
@@ -81,6 +88,9 @@ export default async function DashboardPage() {
                           {c.reference}
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400">
+                      {c.auditor ? c.auditor.name : "—"}
                     </td>
                     <td className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400">
                       {c.auditType ? AUDIT_TYPE_LABELS[c.auditType] : "—"}

@@ -1,10 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { AUDIT_TYPES } from "@/lib/auditTypes";
 import type { AuditType } from "@/generated/prisma";
+
+type Auditor = { id: string; name: string; email: string };
 
 export default function NewCasePage() {
   const router = useRouter();
@@ -12,8 +14,19 @@ export default function NewCasePage() {
   const [bankName, setBankName] = useState("");
   const [reference, setReference] = useState("");
   const [auditType, setAuditType] = useState<AuditType | "">("");
+  const [auditorId, setAuditorId] = useState("");
+  const [auditors, setAuditors] = useState<Auditor[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auditors")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setAuditors(data);
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,6 +41,7 @@ export default function NewCasePage() {
           bankName: bankName.trim() || undefined,
           reference: reference.trim() || undefined,
           auditType: auditType || undefined,
+          auditorId: auditorId.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -112,6 +126,25 @@ export default function NewCasePage() {
               {AUDIT_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
                   {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="auditor" className="block text-sm font-medium mb-1">
+              Auditor *
+            </label>
+            <select
+              id="auditor"
+              required
+              value={auditorId}
+              onChange={(e) => setAuditorId(e.target.value)}
+              className="w-full rounded-md border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100"
+            >
+              <option value="">Select auditor…</option>
+              {auditors.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} ({a.email})
                 </option>
               ))}
             </select>

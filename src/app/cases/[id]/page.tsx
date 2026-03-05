@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { AUDIT_TYPE_LABELS } from "@/lib/auditTypes";
 import { CaseActions } from "./CaseActions";
+import { ReassignAuditor } from "./ReassignAuditor";
 
 const statusLabels: Record<string, string> = {
   pending_analysis: "Pending analysis",
@@ -25,6 +26,7 @@ export default async function CaseDetailPage({
     include: {
       analyses: { orderBy: { completedAt: "desc" } },
       reviews: { orderBy: { createdAt: "desc" } },
+      auditor: { select: { id: true, name: true, email: true } },
     },
   });
 
@@ -55,6 +57,19 @@ export default async function CaseDetailPage({
             Case details
           </h2>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <dt className="text-xs text-zinc-500 dark:text-zinc-400">Assigned auditor</dt>
+              <dd className="mt-0.5 font-medium">
+                {auditCase.auditor ? (
+                  <span>{auditCase.auditor.name} ({auditCase.auditor.email})</span>
+                ) : (
+                  <span className="text-zinc-400">—</span>
+                )}
+              </dd>
+            </div>
+            <div className="sm:col-span-2">
+              <ReassignAuditor caseId={auditCase.id} currentAuditorId={auditCase.auditor?.id ?? ""} />
+            </div>
             <div>
               <dt className="text-xs text-zinc-500 dark:text-zinc-400">Status</dt>
               <dd className="mt-0.5">
