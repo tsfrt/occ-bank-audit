@@ -1,5 +1,7 @@
 # Deploy preview app when a PR is opened against main or when changes are pushed to an open PR against main.
-# Triggers: opened (new PR), synchronize (new commits on PR), reopened (PR reopened).
+# IMPORTANT: For pull_request to trigger, this file must exist on the default branch (main). GitHub does
+# not use the workflow from the PR head branch—it uses the workflow from the base (main).
+# Triggers: opened (new PR), synchronize (new commits on PR), reopened (PR reopened), workflow_dispatch (manual).
 # Vars: DATABRICKS_WORKSPACE_USER (workspace user path segment for bundle root_path).
 
 name: Deploy Preview
@@ -9,6 +11,11 @@ on:
     branches:
       - main
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to run from (default: PR branch or ref)"
+        required: false
 
 env:
   NODE_VERSION: "20"
