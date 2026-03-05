@@ -14,6 +14,7 @@ export async function GET(
     include: {
       analyses: { orderBy: { completedAt: "desc" } },
       reviews: { orderBy: { createdAt: "desc" } },
+      auditor: { select: { id: true, name: true, email: true } },
     },
   });
 
@@ -34,6 +35,7 @@ export async function PATCH(
     status?: "pending_analysis" | "pending_review" | "reviewed" | "manual_review";
     reviewedBy?: string;
     auditType?: string | null;
+    auditorId?: string;
   };
   try {
     body = await request.json();
@@ -51,6 +53,7 @@ export async function PATCH(
     reviewedAt?: Date | null;
     reviewedBy?: string | null;
     auditType?: AuditType | null;
+    auditorId?: string;
   } = {};
 
   if (body.status) data.status = body.status;
@@ -63,6 +66,16 @@ export async function PATCH(
     } else {
       data.auditType = body.auditType as AuditType;
     }
+  }
+  if (body.auditorId !== undefined) {
+    if (!body.auditorId || typeof body.auditorId !== "string") {
+      return NextResponse.json({ error: "auditorId must be a non-empty string" }, { status: 400 });
+    }
+    const auditor = await prisma.auditor.findUnique({ where: { id: body.auditorId } });
+    if (!auditor) {
+      return NextResponse.json({ error: "Auditor not found" }, { status: 400 });
+    }
+    data.auditorId = body.auditorId;
   }
   if (body.status === "reviewed" || body.status === "manual_review") {
     data.reviewedAt = new Date();

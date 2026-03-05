@@ -33,6 +33,18 @@ enum AuditType {
   liquidity_risk_assessment
 }
 
+model Auditor {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  cases AuditCase[]
+
+  @@map("auditors")
+}
+
 model AuditCase {
   id          String   @id @default(cuid())
   bankId      String   @map("bank_id")
@@ -44,15 +56,18 @@ model AuditCase {
   aiConfidence Float?  @map("ai_confidence") // 0-1 or 0-100 from latest analysis
   reviewedAt  DateTime? @map("reviewed_at")
   reviewedBy  String?  @map("reviewed_by")
+  auditorId   String   @map("auditor_id")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  analyses CaseAnalysis[]
-  reviews  CaseReview[]
+  auditor   Auditor       @relation(fields: [auditorId], references: [id], onDelete: Restrict)
+  analyses  CaseAnalysis[]
+  reviews   CaseReview[]
 
   @@index([status])
   @@index([createdAt])
   @@index([updatedAt])
+  @@index([auditorId])
   @@map("audit_cases")
 }
 
