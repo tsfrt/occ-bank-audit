@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { UserAvatar } from "./UserAvatar";
 
 type Summary = {
   total: number;
@@ -51,8 +52,11 @@ export function CaseSummaryBar() {
   if (loading) {
     return (
       <div className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/80 dark:bg-zinc-800/50 px-4 py-2">
-        <div className="max-w-7xl mx-auto flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
-          Loading workload summary…
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+          <span className="text-sm text-zinc-500 dark:text-zinc-400">
+            Loading workload summary…
+          </span>
+          <UserAvatar />
         </div>
       </div>
     );
@@ -61,8 +65,11 @@ export function CaseSummaryBar() {
   if (!summary || summary.error) {
     return (
       <div className="border-b border-zinc-200 dark:border-zinc-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-2">
-        <div className="max-w-7xl mx-auto text-sm text-amber-800 dark:text-amber-200">
-          Summary unavailable. {summary?.error ?? "Could not load data."}
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+          <span className="text-sm text-amber-800 dark:text-amber-200">
+            Summary unavailable. {summary?.error ?? "Could not load data."}
+          </span>
+          <UserAvatar />
         </div>
       </div>
     );
@@ -72,8 +79,8 @@ export function CaseSummaryBar() {
 
   return (
     <div className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/95 px-4 py-3 shadow-sm">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm min-w-0">
           <Link
             href="/"
             className="font-medium text-zinc-900 dark:text-zinc-100 hover:underline"
@@ -135,6 +142,7 @@ export function CaseSummaryBar() {
             </>
           )}
         </div>
+        <UserAvatar />
       </div>
     </div>
   );
