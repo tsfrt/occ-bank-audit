@@ -60,9 +60,10 @@ model AuditCase {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  auditor   Auditor       @relation(fields: [auditorId], references: [id], onDelete: Restrict)
-  analyses  CaseAnalysis[]
-  reviews   CaseReview[]
+  auditor       Auditor       @relation(fields: [auditorId], references: [id], onDelete: Restrict)
+  analyses      CaseAnalysis[]
+  reviews       CaseReview[]
+  notifications Notification[]
 
   @@index([status])
   @@index([createdAt])
@@ -99,4 +100,29 @@ model CaseReview {
 
   @@index([caseId])
   @@map("case_reviews")
+}
+
+enum NotificationType {
+  case_assigned
+  case_status_changed
+}
+
+model Notification {
+  id         String           @id @default(cuid())
+  recipientId String          @map("recipient_id")  // auditor identifier (e.g. email), matches reviewedBy
+  caseId     String           @map("case_id")
+  type       NotificationType
+  title      String
+  message    String?
+  previousStatus String?      @map("previous_status")  // for status_change
+  newStatus  String?          @map("new_status")
+  read       Boolean          @default(false)
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  case AuditCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId])
+  @@index([recipientId, read])
+  @@index([createdAt])
+  @@map("notifications")
 }
