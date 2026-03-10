@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { AUDIT_TYPE_LABELS } from "@/lib/auditTypes";
+import { getMockAnalysisFeedback } from "@/lib/mockAnalysis";
 import { CaseActions } from "./CaseActions";
 
 const statusLabels: Record<string, string> = {
@@ -107,6 +108,52 @@ export default async function CaseDetailPage({
             </div>
           </dl>
         </section>
+
+        {(() => {
+          const mockFeedback = getMockAnalysisFeedback(auditCase.auditType);
+          return mockFeedback ? (
+            <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
+              <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">
+                Analysis
+              </h2>
+              {!latestAnalysis && (
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                  No analysis run yet. Sample feedback for this audit type:
+                </p>
+              )}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">
+                    Summary
+                  </h3>
+                  <p className="text-sm text-zinc-700 dark:text-zinc-300">
+                    {mockFeedback.summary}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
+                    Findings
+                  </h3>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-zinc-700 dark:text-zinc-300">
+                    {mockFeedback.findings.map((f, i) => (
+                      <li key={i}>{f}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
+                    Recommendations
+                  </h3>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-zinc-700 dark:text-zinc-300">
+                    {mockFeedback.recommendations.map((r, i) => (
+                      <li key={i}>{r}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </section>
+          ) : null;
+        })()}
 
         <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
           <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">
