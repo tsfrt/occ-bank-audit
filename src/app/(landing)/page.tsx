@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ThemeToggle } from "../components/ThemeToggle";
 
 // OCC-style colors: dark blue header (#112e51), gold accent, white/gray body
 const OCC_STYLES = {
@@ -76,7 +77,8 @@ export default function LandingPage() {
             An official website of the United States government
           </p>
         </div>
-        <nav className="flex items-center gap-4 text-sm">
+        <nav className="flex items-center gap-4 text-sm items-center">
+          <ThemeToggle />
           <a
             href="https://www.occ.treas.gov/"
             target="_blank"

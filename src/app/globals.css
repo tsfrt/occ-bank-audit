@@ -1,6 +1,29 @@
 @import "tailwindcss";
 
+/* Class-based dark mode for user toggle; Tailwind dark: utilities apply when .dark is on a parent */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+/* System preference when no user override (handled in ThemeProvider) */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light):not(.dark) {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+/* User chose dark */
+html.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+/* User chose light */
+html.light {
   --background: #ffffff;
   --foreground: #171717;
 }
@@ -10,13 +33,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
