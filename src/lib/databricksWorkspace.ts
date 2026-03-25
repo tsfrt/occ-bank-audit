@@ -3,11 +3,19 @@
  */
 
 export function getDatabricksHost(): string {
-  const host = process.env.DATABRICKS_HOST?.trim() ?? "";
-  if (!host) {
+  const raw = process.env.DATABRICKS_HOST?.trim() ?? "";
+  if (!raw) {
     throw new Error("DATABRICKS_HOST must be set");
   }
-  return host.replace(/\/$/, "");
+  const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const url = new URL(withScheme);
+    return `${url.protocol}//${url.host}`.replace(/\/$/, "");
+  } catch {
+    throw new Error(
+      "DATABRICKS_HOST must be a valid host or URL (e.g. https://<workspace>.cloud.databricks.com)"
+    );
+  }
 }
 
 export function getDatabricksToken(): string {
