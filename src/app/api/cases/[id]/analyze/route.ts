@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getEndpointNameForAuditType, isValidAuditType } from "@/lib/auditTypes";
 import { runAuditAnalysis } from "@/services/auditAnalysisService";
+import { createCaseStatusChangedNotification } from "@/lib/notifications";
 import type { AuditType } from "@/generated/prisma";
 
 export async function POST(
@@ -77,6 +78,17 @@ export async function POST(
         },
       }),
     ]);
+
+    if (auditCase.reviewedBy?.trim()) {
+      const ref = auditCase.reference ?? auditCase.id;
+      await createCaseStatusChangedNotification({
+        caseId: auditCase.id,
+        caseReference: ref,
+        recipientId: auditCase.reviewedBy.trim(),
+        previousStatus: auditCase.status,
+        newStatus: "pending_review",
+      });
+    }
 
     const updated = await prisma.auditCase.findUnique({
       where: { id: caseId },

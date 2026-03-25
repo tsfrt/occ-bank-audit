@@ -27,6 +27,15 @@ export async function POST(request: Request) {
       maxAge: COOKIE_MAX_AGE,
       path: "/",
     });
+    // Store current user identifier for notifications (auditor = reviewedBy)
+    const USER_COOKIE_NAME = "occ_analyst_user";
+    cookieStore.set(USER_COOKIE_NAME, email, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: COOKIE_MAX_AGE,
+      path: "/",
+    });
 
     return NextResponse.json({ ok: true });
   } catch {
