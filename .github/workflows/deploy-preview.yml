@@ -34,7 +34,7 @@ jobs:
       - name: Set deployment environment
         id: env
         run: |
-          databricks auth login --token ${{ secrets.DATABRICKS_TOKEN }} --profile e2-demo-field-eng
+          databricks auth login --profile e2-demo-field-eng
           if [ -n "${{ github.event.pull_request.number }}" ]; then
             DEPLOYMENT_ENV="pr-${{ github.event.pull_request.number }}"
           else
