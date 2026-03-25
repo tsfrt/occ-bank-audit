@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
     orderBy,
     include: {
       analyses: { orderBy: { completedAt: "desc" }, take: 1 },
+      auditor: { select: { id: true, name: true, email: true } },
     },
   });
 
@@ -38,22 +39,33 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  let body: { bankId: string; bankName?: string; reference?: string; auditType?: string };
+  let body: { bankId: string; bankName?: string; reference?: string; auditType?: string; auditorId?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { bankId, bankName, reference, auditType } = body;
+  const { bankId, bankName, reference, auditType, auditorId } = body;
   if (!bankId || typeof bankId !== "string") {
     return NextResponse.json(
       { error: "bankId is required" },
       { status: 400 }
     );
   }
+  if (!auditorId || typeof auditorId !== "string") {
+    return NextResponse.json(
+      { error: "auditorId is required" },
+      { status: 400 }
+    );
+  }
   if (auditType !== undefined && auditType !== null && auditType !== "" && !isValidAuditType(auditType)) {
     return NextResponse.json({ error: "Invalid audit type" }, { status: 400 });
+  }
+
+  const auditor = await prisma.auditor.findUnique({ where: { id: auditorId } });
+  if (!auditor) {
+    return NextResponse.json({ error: "Auditor not found" }, { status: 400 });
   }
 
   const auditCase = await prisma.auditCase.create({
@@ -63,6 +75,7 @@ export async function POST(request: NextRequest) {
       reference: reference ?? null,
       auditType: auditType && isValidAuditType(auditType) ? (auditType as AuditType) : null,
       status: "pending_analysis",
+      auditorId,
     },
   });
 
