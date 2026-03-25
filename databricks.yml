@@ -7,6 +7,8 @@
 #   workspace_user   — workspace user path segment for root_path (e.g. 12345@databricks)
 #   app_name         — app name (prod: bank-audit-analyst; preview: bank-audit-analyst-<env>)
 #   secret_key       — secret key in scope bank-audit-app (prod: database-url-prod; preview: database-url-<env>)
+#   sql_warehouse_id — resolved from warehouse named 00vsdb (see variables.sql_warehouse_id.lookup)
+#   bank_statements_volume_name — UC three-part volume name for statement files (default main.tsfrt.occ)
 
 bundle:
   name: bank-audit-analyst-bundle
@@ -26,6 +28,13 @@ variables:
   preview_id:
     description: Preview deployment ID for root_path isolation (e.g. pr-5)
     default: preview
+  sql_warehouse_id:
+    description: SQL warehouse ID for document queries (resolved from warehouse name at deploy)
+    lookup:
+      warehouse: "00vsdb"
+  bank_statements_volume_name:
+    description: Unity Catalog volume for bank statement files (catalog.schema.volume)
+    default: main.tsfrt.occ
 
 resources:
   apps:
@@ -43,12 +52,25 @@ resources:
             value_from: database_url
           - name: LAKEBASE_DATABASE_URL
             value_from: database_url
+          - name: DATABRICKS_SQL_WAREHOUSE_ID
+            value_from: sql_warehouse
+          - name: BANK_STATEMENTS_VOLUME_BASE_PATH
+            value_from: bank_statements_volume
       resources:
         - name: database_url
           secret:
             scope: bank-audit-app
             key: ${var.secret_key}
             permission: READ
+        - name: sql_warehouse
+          sql_warehouse:
+            id: ${var.sql_warehouse_id}
+            permission: CAN_USE
+        - name: bank_statements_volume
+          uc_securable:
+            securable_type: VOLUME
+            securable_full_name: ${var.bank_statements_volume_name}
+            permission: READ_VOLUME
 
 targets:
   prod:

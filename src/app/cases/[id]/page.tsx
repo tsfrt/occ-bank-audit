@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { AUDIT_TYPE_LABELS } from "@/lib/auditTypes";
 import { CaseActions } from "./CaseActions";
+import { DocumentReviewSection } from "./DocumentReviewSection";
 
 const statusLabels: Record<string, string> = {
   pending_analysis: "Pending analysis",
@@ -33,7 +34,7 @@ export default async function CaseDetailPage({
   const latestAnalysis = auditCase.analyses[0];
 
   return (
-    <main className="max-w-3xl mx-auto px-6 py-8 space-y-8">
+    <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
       <div className="border-b border-zinc-200 dark:border-zinc-800 pb-4">
         <Link
           href="/dashboard"
@@ -114,6 +115,12 @@ export default async function CaseDetailPage({
           </h2>
           <CaseActions caseId={auditCase.id} status={auditCase.status} currentAuditType={auditCase.auditType} />
         </section>
+
+        <DocumentReviewSection
+          caseId={auditCase.id}
+          bankName={auditCase.bankName}
+          auditType={auditCase.auditType}
+        />
 
         {auditCase.reviews.length > 0 && (
           <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
