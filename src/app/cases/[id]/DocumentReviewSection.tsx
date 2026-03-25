@@ -64,10 +64,10 @@ function isRasterImagePath(path: string): boolean {
 type Props = {
   caseId: string;
   bankName: string | null | undefined;
-  auditType: string | null | undefined;
+  bankId: string;
 };
 
-export function DocumentReviewSection({ caseId, bankName, auditType }: Props) {
+export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,12 +77,13 @@ export function DocumentReviewSection({ caseId, bankName, auditType }: Props) {
     null
   );
 
-  const show =
-    auditType === "bank_statement_analysis" && bankName?.trim().length;
+  const hasBankName = Boolean(bankName?.trim());
 
   useEffect(() => {
-    if (!show) {
+    if (!hasBankName) {
       setLoading(false);
+      setDocuments([]);
+      setLoadError(null);
       return;
     }
     let cancelled = false;
@@ -119,7 +120,7 @@ export function DocumentReviewSection({ caseId, bankName, auditType }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [caseId, show]);
+  }, [caseId, hasBankName]);
 
   const doc = documents[docIndex] ?? null;
 
@@ -137,31 +138,61 @@ export function DocumentReviewSection({ caseId, bankName, auditType }: Props) {
     []
   );
 
-  if (!show) {
-    return null;
-  }
-
   return (
     <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
       <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">
         Document review
       </h2>
 
-      {loading && (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
-      )}
-
-      {!loading && loadError && (
-        <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
-      )}
-
-      {!loading && !loadError && documents.length === 0 && (
+      {!hasBankName && (
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          No bank statement files found in the warehouse for this bank name.
+          This case has no bank name. Add a bank name that matches (case-insensitive){" "}
+          <code className="text-xs bg-zinc-100 dark:bg-zinc-800 px-1 rounded">
+            main.tsfrt.bank_statement_analysis.bank_name
+          </code>{" "}
+          to load statement files.
         </p>
       )}
 
-      {!loading && !loadError && documents.length > 0 && doc && (
+      {hasBankName && (
+        <div className="mb-4 rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 px-3 py-2 text-sm">
+          <p className="text-zinc-600 dark:text-zinc-300">
+            <span className="font-medium text-zinc-800 dark:text-zinc-200">
+              Case bank name:
+            </span>{" "}
+            {bankName?.trim()}
+          </p>
+          <p className="text-zinc-600 dark:text-zinc-300 mt-1">
+            <span className="font-medium text-zinc-800 dark:text-zinc-200">
+              Case bank ID:
+            </span>{" "}
+            <code className="text-xs">{bankId}</code>
+          </p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+            Warehouse rows are matched with{" "}
+            <code className="text-[11px] bg-zinc-100 dark:bg-zinc-800 px-1 rounded">
+              LOWER(TRIM(bank_name))
+            </code>{" "}
+            (case-insensitive).
+          </p>
+        </div>
+      )}
+
+      {hasBankName && loading && (
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
+      )}
+
+      {hasBankName && !loading && loadError && (
+        <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
+      )}
+
+      {hasBankName && !loading && !loadError && documents.length === 0 && (
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          No bank statement files found in the warehouse for this bank name (case-insensitive match).
+        </p>
+      )}
+
+      {hasBankName && !loading && !loadError && documents.length > 0 && doc && (
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="lg:w-1/2 space-y-3 min-w-0">
             {documents.length > 1 && (
@@ -178,7 +209,9 @@ export function DocumentReviewSection({ caseId, bankName, auditType }: Props) {
                 >
                   {documents.map((d, i) => (
                     <option key={`${d.filePath}-${i}`} value={i}>
-                      {d.fileName || d.filePath}
+                      {[d.fileName || d.filePath, d.bankName ? ` · ${d.bankName}` : ""]
+                        .filter(Boolean)
+                        .join("")}
                     </option>
                   ))}
                 </select>
@@ -267,6 +300,24 @@ export function DocumentReviewSection({ caseId, bankName, auditType }: Props) {
           </div>
 
           <div className="lg:w-1/2 min-w-0 space-y-4">
+            {doc.bankName && (
+              <div>
+                <h3 className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
+                  Warehouse bank name
+                </h3>
+                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                  {doc.bankName}
+                </p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  Value from{" "}
+                  <code className="text-[11px] bg-zinc-100 dark:bg-zinc-800 px-1 rounded">
+                    bank_statement_analysis.bank_name
+                  </code>{" "}
+                  for this file.
+                </p>
+              </div>
+            )}
+
             {doc.details && (
               <div>
                 <h3 className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
@@ -276,7 +327,7 @@ export function DocumentReviewSection({ caseId, bankName, auditType }: Props) {
                   {doc.details.bank_name != null && (
                     <>
                       <dt className="text-zinc-500 dark:text-zinc-400">
-                        Bank (details)
+                        Bank (details struct)
                       </dt>
                       <dd>{doc.details.bank_name || "—"}</dd>
                     </>

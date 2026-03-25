@@ -134,7 +134,7 @@ export default async function CaseDetailPage({
         <DocumentReviewSection
           caseId={auditCase.id}
           bankName={auditCase.bankName}
-          auditType={auditCase.auditType}
+          bankId={auditCase.bankId}
         />
 
         {auditCase.reviews.length > 0 && (

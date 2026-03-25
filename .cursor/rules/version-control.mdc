@@ -1,0 +1,6 @@
+---
+description: 
+alwaysApply: true
+---
+
+for this project when I ask to create a new feature create a new branch and open a pr.  that will kick of a preview deployment.  use the open-pr-and-watch.sh script for this project.  monitor ci/cd and make fixes as needed.
