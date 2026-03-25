@@ -1,4 +1,7 @@
-import { getDatabricksHost, getDatabricksToken } from "@/lib/databricksWorkspace";
+import {
+  getDatabricksHost,
+  getDatabricksOAuthAccessToken,
+} from "@/lib/databricksWorkspace";
 
 type StatementStatus = {
   state?: string;
@@ -21,9 +24,10 @@ type ExecuteResponse = {
   };
 };
 
-function authHeaders(): HeadersInit {
+async function authHeaders(): Promise<HeadersInit> {
+  const accessToken = await getDatabricksOAuthAccessToken();
   return {
-    Authorization: `Bearer ${getDatabricksToken()}`,
+    Authorization: `Bearer ${accessToken}`,
     "Content-Type": "application/json",
   };
 }
@@ -55,7 +59,7 @@ export async function executeSql(
   const host = getDatabricksHost();
   const post = await fetch(`${host}/api/2.0/sql/statements`, {
     method: "POST",
-    headers: authHeaders(),
+    headers: await authHeaders(),
     body: JSON.stringify({
       warehouse_id: warehouseId,
       statement,
@@ -90,7 +94,7 @@ export async function executeSql(
           ? next
           : `${host}${next.startsWith("/") ? "" : "/"}${next}`;
         const chunkRes = await fetch(chunkUrl, {
-          headers: { Authorization: `Bearer ${getDatabricksToken()}` },
+          headers: { Authorization: `Bearer ${await getDatabricksOAuthAccessToken()}` },
         });
         const chunk = (await chunkRes.json()) as ExecuteResponse;
         if (!chunkRes.ok) {
@@ -110,7 +114,7 @@ export async function executeSql(
     }
     await sleep(500);
     const poll = await fetch(`${host}/api/2.0/sql/statements/${sid}`, {
-      headers: { Authorization: `Bearer ${getDatabricksToken()}` },
+      headers: { Authorization: `Bearer ${await getDatabricksOAuthAccessToken()}` },
     });
     payload = (await poll.json()) as ExecuteResponse;
     if (!poll.ok) {
