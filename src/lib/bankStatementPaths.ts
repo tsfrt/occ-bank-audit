@@ -2,6 +2,15 @@ import { getBankStatementAllowlistPrefix } from "@/lib/databricksWorkspace";
 
 const DEFAULT_VOLUME_BASE = "/Volumes/main/tsfrt/occ";
 
+/** Canonical form for comparing /Volumes/... paths (slashes, no trailing slash). */
+export function normalizeVolumePath(filePath: string): string {
+  let s = filePath.trim().replace(/\\/g, "/").replace(/\/+/g, "/");
+  if (!s.startsWith("/")) {
+    s = `/${s}`;
+  }
+  return s.replace(/\/+$/, "") || s;
+}
+
 /**
  * Resolve DB file_path to an absolute /Volumes/... path.
  */
@@ -9,7 +18,7 @@ export function resolveBankStatementFilePath(filePath: string): string {
   const raw = filePath.trim();
   if (!raw) return raw;
   if (raw.startsWith("/Volumes/")) {
-    return raw.replace(/\/+$/, "") || raw;
+    return normalizeVolumePath(raw);
   }
   const base =
     process.env.BANK_STATEMENTS_VOLUME_BASE_PATH?.trim().replace(
@@ -17,7 +26,7 @@ export function resolveBankStatementFilePath(filePath: string): string {
       ""
     ) ?? DEFAULT_VOLUME_BASE;
   const rel = raw.replace(/^\/+/, "");
-  return `${base}/${rel}`.replace(/\/+/g, "/");
+  return normalizeVolumePath(`${base}/${rel}`);
 }
 
 /**
@@ -25,8 +34,8 @@ export function resolveBankStatementFilePath(filePath: string): string {
  */
 export function isUnderBankStatementAllowlist(resolvedPath: string): boolean {
   const prefix = getBankStatementAllowlistPrefix();
-  const p = resolvedPath.replace(/\/+$/, "") || resolvedPath;
-  const pre = prefix.replace(/\/+$/, "");
+  const p = normalizeVolumePath(resolvedPath);
+  const pre = normalizeVolumePath(prefix);
   if (p === pre) return true;
   return p.startsWith(`${pre}/`);
 }

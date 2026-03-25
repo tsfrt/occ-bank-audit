@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { fromBase64Url } from "@/lib/base64url";
 import { fetchBankStatementDocuments } from "@/lib/bankStatementDocumentsService";
-import { isUnderBankStatementAllowlist } from "@/lib/bankStatementPaths";
+import {
+  isUnderBankStatementAllowlist,
+  normalizeVolumePath,
+} from "@/lib/bankStatementPaths";
 import { downloadVolumeFile } from "@/lib/databricksVolumeFiles";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +38,8 @@ export async function GET(
     return NextResponse.json({ error: "Invalid p" }, { status: 400 });
   }
 
+  decodedPath = normalizeVolumePath(decodedPath);
+
   const auditCase = await prisma.auditCase.findUnique({
     where: { id: caseId },
     select: { bankName: true },
@@ -51,7 +56,9 @@ export async function GET(
   let allowed = false;
   try {
     const docs = await fetchBankStatementDocuments(auditCase.bankName.trim());
-    allowed = docs.some((d) => d.filePath === decodedPath);
+    allowed = docs.some(
+      (d) => normalizeVolumePath(d.filePath) === decodedPath
+    );
   } catch {
     return NextResponse.json({ error: "Upstream error" }, { status: 502 });
   }
