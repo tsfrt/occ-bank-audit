@@ -18,6 +18,7 @@ ENDPOINT_ID="primary"
 
 echo "Creating Lakebase branch ${FEATURE_BRANCH_ID} from ${PROD_BRANCH_ID}..."
 
+databricks auth login --profile e2-demo-field-eng --host https://e2-demo-field-eng.cloud.databricks.com
 # Create branch from production (copy-on-write) if it does not already exist
 if ! databricks postgres get-branch -p e2-demo-field-eng "${BRANCH_RESOURCE}" &>/dev/null; then
   databricks postgres create-branch -p e2-demo-field-eng "${PROJECT_RESOURCE}" "${FEATURE_BRANCH_ID}" \
