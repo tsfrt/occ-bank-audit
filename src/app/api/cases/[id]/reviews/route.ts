@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getCurrentUserId } from "@/lib/auth";
+import {
+  createCaseAssignedNotification,
+  createCaseStatusChangedNotification,
+} from "@/lib/notifications";
 
 export async function POST(
   request: NextRequest,
@@ -26,6 +31,10 @@ export async function POST(
     return NextResponse.json({ error: "Case not found" }, { status: 404 });
   }
 
+  // Use current user as reviewer when not provided (e.g. from "Mark as reviewed" in UI)
+  const currentUser = await getCurrentUserId();
+  const reviewedBy = (body.reviewedBy?.trim() || currentUser) || null;
+
   const newStatus = body.action === "reviewed" ? "reviewed" : "manual_review";
 
   const [review, updated] = await prisma.$transaction([
@@ -34,7 +43,7 @@ export async function POST(
         caseId,
         action: body.action,
         notes: body.notes ?? null,
-        reviewedBy: body.reviewedBy ?? null,
+        reviewedBy,
       },
     }),
     prisma.auditCase.update({
@@ -42,10 +51,30 @@ export async function POST(
       data: {
         status: newStatus,
         reviewedAt: new Date(),
-        reviewedBy: body.reviewedBy ?? undefined,
+        reviewedBy: reviewedBy ?? undefined,
       },
     }),
   ]);
+
+  const ref = updated.reference ?? updated.id;
+  const recipientId = reviewedBy?.trim();
+  const previousReviewer = auditCase.reviewedBy?.trim() ?? null;
+  if (recipientId) {
+    if (recipientId !== previousReviewer) {
+      await createCaseAssignedNotification({
+        caseId,
+        caseReference: ref,
+        recipientId,
+      });
+    }
+    await createCaseStatusChangedNotification({
+      caseId,
+      caseReference: ref,
+      recipientId,
+      previousStatus: auditCase.status,
+      newStatus,
+    });
+  }
 
   return NextResponse.json({ case: updated, review }, { status: 201 });
 }

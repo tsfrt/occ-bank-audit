@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isValidAuditType } from "@/lib/auditTypes";
 import type { AuditType } from "@/generated/prisma";
+import {
+  createCaseAssignedNotification,
+  createCaseStatusChangedNotification,
+} from "@/lib/notifications";
 
 export async function GET(
   _request: NextRequest,
@@ -85,6 +89,32 @@ export async function PATCH(
     where: { id },
     data,
   });
+
+  // Notifications: assigned when reviewedBy is set or changed; status_change when status changes and case has assignee
+  const ref = updated.reference ?? updated.id;
+  const newReviewer = body.reviewedBy != null ? body.reviewedBy.trim() : null;
+  const previousReviewer = existing.reviewedBy?.trim() ?? null;
+  if (newReviewer && newReviewer !== previousReviewer) {
+    await createCaseAssignedNotification({
+      caseId: id,
+      caseReference: ref,
+      recipientId: newReviewer,
+    });
+  }
+  if (
+    body.status != null &&
+    existing.status !== body.status &&
+    (updated.reviewedBy ?? body.reviewedBy)
+  ) {
+    const recipientId = (updated.reviewedBy ?? body.reviewedBy)!.trim();
+    await createCaseStatusChangedNotification({
+      caseId: id,
+      caseReference: ref,
+      recipientId,
+      previousStatus: existing.status,
+      newStatus: body.status,
+    });
+  }
 
   return NextResponse.json(updated);
 }
