@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { fromBase64Url } from "@/lib/base64url";
 import { fetchBankStatementDocuments } from "@/lib/bankStatementDocumentsService";
-import { isUnderBankStatementAllowlist } from "@/lib/bankStatementPaths";
+import {
+  isUnderBankStatementAllowlist,
+  normalizeVolumePath,
+} from "@/lib/bankStatementPaths";
 import { downloadVolumeFile } from "@/lib/databricksVolumeFiles";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +43,7 @@ export async function GET(
     logFileRoute("invalid_p", { caseId, pLength: p.length });
     return NextResponse.json({ error: "Invalid p" }, { status: 400 });
   }
+  decodedPath = normalizeVolumePath(decodedPath);
 
   logFileRoute("request_start", {
     caseId,
@@ -69,8 +73,10 @@ export async function GET(
   let allowed = false;
   try {
     const docs = await fetchBankStatementDocuments(auditCase.bankName.trim());
-    const matchingDoc = docs.find((d) => d.filePath === decodedPath);
-    allowed = docs.some((d) => d.filePath === decodedPath);
+    const matchingDoc = docs.find(
+      (d) => normalizeVolumePath(d.filePath) === decodedPath
+    );
+    allowed = docs.some((d) => normalizeVolumePath(d.filePath) === decodedPath);
     logFileRoute("warehouse_docs_checked", {
       caseId,
       bankName: auditCase.bankName,
