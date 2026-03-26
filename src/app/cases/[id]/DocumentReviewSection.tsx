@@ -61,6 +61,13 @@ function isRasterImagePath(path: string): boolean {
   );
 }
 
+function getFullscreenElement(): Element | null {
+  const d = document as Document & {
+    webkitFullscreenElement?: Element | null;
+  };
+  return document.fullscreenElement ?? d.webkitFullscreenElement ?? null;
+}
+
 type Props = {
   caseId: string;
   bankName: string | null | undefined;
@@ -80,8 +87,49 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
   const [rasterFetchError, setRasterFetchError] = useState<string | null>(null);
   const [rasterFetchLoading, setRasterFetchLoading] = useState(false);
   const rasterObjectUrlRef = useRef<string | null>(null);
+  const previewFullscreenRef = useRef<HTMLDivElement | null>(null);
+  const [isDocFullscreen, setIsDocFullscreen] = useState(false);
 
   const hasBankName = Boolean(bankName?.trim());
+
+  useEffect(() => {
+    const sync = () => {
+      const el = previewFullscreenRef.current;
+      setIsDocFullscreen(Boolean(el && getFullscreenElement() === el));
+    };
+    document.addEventListener("fullscreenchange", sync);
+    document.addEventListener("webkitfullscreenchange", sync);
+    return () => {
+      document.removeEventListener("fullscreenchange", sync);
+      document.removeEventListener("webkitfullscreenchange", sync);
+    };
+  }, []);
+
+  const toggleDocFullscreen = useCallback(async () => {
+    const el = previewFullscreenRef.current;
+    if (!el) return;
+    try {
+      if (getFullscreenElement() === el) {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else {
+          const d = document as Document & {
+            webkitExitFullscreen?: () => Promise<void>;
+          };
+          await d.webkitExitFullscreen?.();
+        }
+      } else if (el.requestFullscreen) {
+        await el.requestFullscreen();
+      } else {
+        const w = el as HTMLDivElement & {
+          webkitRequestFullscreen?: () => Promise<void>;
+        };
+        await w.webkitRequestFullscreen?.();
+      }
+    } catch {
+      // User gesture / browser policy; ignore.
+    }
+  }, []);
 
   const revokeRasterObjectUrl = useCallback((): void => {
     if (rasterObjectUrlRef.current) {
@@ -332,7 +380,27 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
               </label>
             )}
 
-            <div className="relative rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-950 overflow-auto max-h-[70vh] flex items-center justify-center">
+            <div
+              ref={previewFullscreenRef}
+              className="group/preview relative flex max-h-[70vh] min-h-[160px] flex-col overflow-hidden rounded-md border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-950 [&:fullscreen]:fixed [&:fullscreen]:inset-0 [&:fullscreen]:z-[100] [&:fullscreen]:max-h-none [&:fullscreen]:min-h-0 [&:fullscreen]:h-screen [&:fullscreen]:w-screen [&:fullscreen]:rounded-none [&:fullscreen]:border-0 [&:fullscreen]:bg-zinc-950 [&:fullscreen_.document-review-img]:max-h-[min(calc(100dvh-5rem),100%)] [&:fullscreen_.document-review-img]:w-auto [&:fullscreen_.document-review-img]:object-contain"
+            >
+              {fileUrl && (
+                <div className="pointer-events-none absolute right-2 top-2 z-20 flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    title={
+                      isDocFullscreen
+                        ? "Exit full screen (Esc)"
+                        : "View document full screen"
+                    }
+                    onClick={() => void toggleDocFullscreen()}
+                    className="pointer-events-auto rounded-md border border-zinc-300 bg-white/95 px-2.5 py-1 text-xs font-medium text-zinc-800 shadow-sm backdrop-blur-sm hover:bg-white dark:border-zinc-600 dark:bg-zinc-900/95 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    {isDocFullscreen ? "Exit full screen" : "Full screen"}
+                  </button>
+                </div>
+              )}
+              <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-2 pt-10">
               {fileUrl && isRasterImagePath(doc.filePath) && (
                 <div className="relative inline-block max-w-full w-full">
                   {rasterFetchLoading && (
@@ -361,7 +429,7 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
                   <img
                     src={rasterObjectUrl}
                     alt={doc.fileName ?? "Statement"}
-                    className="max-w-full h-auto block"
+                    className="document-review-img max-h-full max-w-full h-auto object-contain"
                     onLoad={onImgLoad}
                     onError={onImgDecodeError}
                   />
@@ -430,6 +498,7 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
                     </a>
                   </div>
                 )}
+              </div>
             </div>
             {doc.fileSize != null && (
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
