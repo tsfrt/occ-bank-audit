@@ -68,6 +68,32 @@ function getFullscreenElement(): Element | null {
   return document.fullscreenElement ?? d.webkitFullscreenElement ?? null;
 }
 
+/**
+ * Where the bitmap is drawn inside a laid-out <img> with object-fit: contain
+ * (same math as CSS object-fit: contain). Coordinates are relative to the
+ * element's content box (clientWidth × clientHeight).
+ */
+function objectFitContainContentRect(
+  clientW: number,
+  clientH: number,
+  naturalW: number,
+  naturalH: number
+): { ox: number; oy: number; rw: number; rh: number } {
+  if (naturalW <= 0 || naturalH <= 0 || clientW <= 0 || clientH <= 0) {
+    return { ox: 0, oy: 0, rw: clientW, rh: clientH };
+  }
+  const ir = naturalW / naturalH;
+  const cr = clientW / clientH;
+  if (ir > cr) {
+    const rw = clientW;
+    const rh = clientW / ir;
+    return { ox: 0, oy: (clientH - rh) / 2, rw, rh };
+  }
+  const rh = clientH;
+  const rw = clientH * ir;
+  return { ox: (clientW - rw) / 2, oy: 0, rw, rh };
+}
+
 type Props = {
   caseId: string;
   bankName: string | null | undefined;
@@ -83,6 +109,12 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
   const [imgNatural, setImgNatural] = useState<{ w: number; h: number } | null>(
     null
   );
+  /** Laid-out size of the statement <img> (for bbox math with object-contain). */
+  const [imgLayoutSize, setImgLayoutSize] = useState<{
+    cw: number;
+    ch: number;
+  } | null>(null);
+  const statementImgRef = useRef<HTMLImageElement | null>(null);
   const [rasterObjectUrl, setRasterObjectUrl] = useState<string | null>(null);
   const [rasterFetchError, setRasterFetchError] = useState<string | null>(null);
   const [rasterFetchLoading, setRasterFetchLoading] = useState(false);
@@ -104,6 +136,39 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
       document.removeEventListener("webkitfullscreenchange", sync);
     };
   }, []);
+
+  const syncStatementImgLayout = useCallback(() => {
+    const el = statementImgRef.current;
+    if (!el || el.naturalWidth <= 0) return;
+    const cw = el.clientWidth;
+    const ch = el.clientHeight;
+    if (cw > 0 && ch > 0) {
+      setImgLayoutSize({ cw, ch });
+    }
+  }, []);
+
+  useEffect(() => {
+    const bump = () => {
+      requestAnimationFrame(() => {
+        syncStatementImgLayout();
+        requestAnimationFrame(() => syncStatementImgLayout());
+      });
+    };
+    document.addEventListener("fullscreenchange", bump);
+    document.addEventListener("webkitfullscreenchange", bump);
+    return () => {
+      document.removeEventListener("fullscreenchange", bump);
+      document.removeEventListener("webkitfullscreenchange", bump);
+    };
+  }, [syncStatementImgLayout]);
+
+  useEffect(() => {
+    const el = statementImgRef.current;
+    if (!el || !rasterObjectUrl) return;
+    const ro = new ResizeObserver(() => syncStatementImgLayout());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [rasterObjectUrl, syncStatementImgLayout]);
 
   const toggleDocFullscreen = useCallback(async () => {
     const el = previewFullscreenRef.current;
@@ -167,6 +232,7 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
           setDocIndex(0);
           setSelectedElId(null);
           setImgNatural(null);
+          setImgLayoutSize(null);
         }
       } catch (e) {
         if (!cancelled) {
@@ -196,6 +262,7 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
     setRasterFetchError(null);
     setRasterFetchLoading(false);
     setImgNatural(null);
+    setImgLayoutSize(null);
 
     if (!fileUrl || !doc || !isRasterImagePath(doc.filePath)) {
       return;
@@ -276,6 +343,14 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
     (e: React.SyntheticEvent<HTMLImageElement>) => {
       const el = e.currentTarget;
       setImgNatural({ w: el.naturalWidth, h: el.naturalHeight });
+      requestAnimationFrame(() => {
+        const img = statementImgRef.current;
+        if (img && img.naturalWidth > 0) {
+          const cw = img.clientWidth;
+          const ch = img.clientHeight;
+          if (cw > 0 && ch > 0) setImgLayoutSize({ cw, ch });
+        }
+      });
       console.info("[document-review] image_decode_success", {
         caseId,
         filePath: doc?.filePath ?? null,
@@ -366,6 +441,7 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
                     setDocIndex(Number(e.target.value));
                     setSelectedElId(null);
                     setImgNatural(null);
+                    setImgLayoutSize(null);
                     setRasterFetchError(null);
                   }}
                 >
@@ -402,7 +478,7 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
               )}
               <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-2 pt-10">
               {fileUrl && isRasterImagePath(doc.filePath) && (
-                <div className="relative inline-block max-w-full w-full">
+                <div className="relative inline-block max-w-full">
                   {rasterFetchLoading && (
                     <p className="text-sm text-zinc-500 dark:text-zinc-400 py-8 text-center">
                       Loading image…
@@ -427,6 +503,7 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
                     <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
+                    ref={statementImgRef}
                     src={rasterObjectUrl}
                     alt={doc.fileName ?? "Statement"}
                     className="document-review-img max-h-full max-w-full h-auto object-contain"
@@ -436,14 +513,28 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
                     </>
                   )}
                   {imgNatural &&
+                    imgLayoutSize &&
+                    imgLayoutSize.cw > 0 &&
+                    imgLayoutSize.ch > 0 &&
                     doc.parsedElements
                       .filter((pe) => pe.pageId === 0 && pe.bbox)
                       .map((pe) => {
                         const b = pe.bbox!;
-                        const leftPct = (b.left / imgNatural.w) * 100;
-                        const topPct = (b.top / imgNatural.h) * 100;
-                        const wPct = (b.width / imgNatural.w) * 100;
-                        const hPct = (b.height / imgNatural.h) * 100;
+                        const { ox, oy, rw, rh } = objectFitContainContentRect(
+                          imgLayoutSize.cw,
+                          imgLayoutSize.ch,
+                          imgNatural.w,
+                          imgNatural.h
+                        );
+                        const cw = imgLayoutSize.cw;
+                        const ch = imgLayoutSize.ch;
+                        const leftPct =
+                          ((ox + (b.left / imgNatural.w) * rw) / cw) * 100;
+                        const topPct =
+                          ((oy + (b.top / imgNatural.h) * rh) / ch) * 100;
+                        const wPct = ((b.width / imgNatural.w) * rw) / cw * 100;
+                        const hPct =
+                          ((b.height / imgNatural.h) * rh) / ch * 100;
                         const active = selectedElId === pe.id;
                         return (
                           <button
