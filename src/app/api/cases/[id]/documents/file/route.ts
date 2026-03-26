@@ -7,6 +7,10 @@ import { downloadVolumeFile } from "@/lib/databricksVolumeFiles";
 
 export const dynamic = "force-dynamic";
 
+function logFileRoute(event: string, details: Record<string, unknown>): void {
+  console.info("[documents/file]", event, details);
+}
+
 function contentTypeForPath(filePath: string): string {
   const lower = filePath.toLowerCase();
   if (lower.endsWith(".pdf")) return "application/pdf";
@@ -25,6 +29,7 @@ export async function GET(
   const { id: caseId } = await params;
   const p = request.nextUrl.searchParams.get("p");
   if (!p) {
+    logFileRoute("missing_p", { caseId });
     return NextResponse.json({ error: "Missing p" }, { status: 400 });
   }
 
@@ -32,8 +37,14 @@ export async function GET(
   try {
     decodedPath = fromBase64Url(p);
   } catch {
+    logFileRoute("invalid_p", { caseId, pLength: p.length });
     return NextResponse.json({ error: "Invalid p" }, { status: 400 });
   }
+
+  logFileRoute("request_start", {
+    caseId,
+    decodedPath,
+  });
 
   const auditCase = await prisma.auditCase.findUnique({
     where: { id: caseId },
@@ -41,27 +52,59 @@ export async function GET(
   });
 
   if (!auditCase?.bankName?.trim()) {
+    logFileRoute("case_bank_missing", { caseId, decodedPath });
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (!isUnderBankStatementAllowlist(decodedPath)) {
+  const allowlisted = isUnderBankStatementAllowlist(decodedPath);
+  if (!allowlisted) {
+    logFileRoute("forbidden_allowlist", {
+      caseId,
+      bankName: auditCase.bankName,
+      decodedPath,
+    });
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   let allowed = false;
   try {
     const docs = await fetchBankStatementDocuments(auditCase.bankName.trim());
+    const matchingDoc = docs.find((d) => d.filePath === decodedPath);
     allowed = docs.some((d) => d.filePath === decodedPath);
+    logFileRoute("warehouse_docs_checked", {
+      caseId,
+      bankName: auditCase.bankName,
+      requestedPath: decodedPath,
+      docCount: docs.length,
+      allowed,
+      samplePaths: docs.slice(0, 3).map((d) => d.filePath),
+      matchedPath: matchingDoc?.filePath ?? null,
+    });
   } catch {
+    logFileRoute("warehouse_docs_error", {
+      caseId,
+      bankName: auditCase.bankName,
+      requestedPath: decodedPath,
+    });
     return NextResponse.json({ error: "Upstream error" }, { status: 502 });
   }
 
   if (!allowed) {
+    logFileRoute("forbidden_not_in_case_docs", {
+      caseId,
+      bankName: auditCase.bankName,
+      decodedPath,
+    });
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
     const buf = await downloadVolumeFile(decodedPath);
+    logFileRoute("download_success", {
+      caseId,
+      decodedPath,
+      bytes: buf.length,
+    });
     const ct = contentTypeForPath(decodedPath);
     return new NextResponse(new Uint8Array(buf), {
       headers: {
@@ -72,6 +115,11 @@ export async function GET(
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Download failed";
+    logFileRoute("download_error", {
+      caseId,
+      decodedPath,
+      error: message,
+    });
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }
