@@ -10,6 +10,10 @@ import { downloadVolumeFile } from "@/lib/databricksVolumeFiles";
 
 export const dynamic = "force-dynamic";
 
+function logFileProxy(event: string, details: Record<string, unknown>): void {
+  console.error("[documents/file]", event, JSON.stringify(details));
+}
+
 function contentTypeForPath(filePath: string): string {
   const lower = filePath.toLowerCase();
   if (lower.endsWith(".pdf")) return "application/pdf";
@@ -28,6 +32,7 @@ export async function GET(
   const { id: caseId } = await params;
   const p = request.nextUrl.searchParams.get("p");
   if (!p) {
+    logFileProxy("missing_p", { caseId });
     return NextResponse.json({ error: "Missing p" }, { status: 400 });
   }
 
@@ -35,6 +40,7 @@ export async function GET(
   try {
     decodedPath = fromBase64Url(p);
   } catch {
+    logFileProxy("invalid_p", { caseId, pLength: p.length });
     return NextResponse.json({ error: "Invalid p" }, { status: 400 });
   }
 
@@ -46,10 +52,16 @@ export async function GET(
   });
 
   if (!auditCase?.bankName?.trim()) {
+    logFileProxy("case_bank_missing", { caseId, decodedPath });
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   if (!isUnderBankStatementAllowlist(decodedPath)) {
+    logFileProxy("forbidden_allowlist", {
+      caseId,
+      bankName: auditCase.bankName,
+      decodedPath,
+    });
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -59,11 +71,30 @@ export async function GET(
     allowed = docs.some(
       (d) => normalizeVolumePath(d.filePath) === decodedPath
     );
+    if (!allowed) {
+      logFileProxy("warehouse_docs_no_match", {
+        caseId,
+        bankName: auditCase.bankName,
+        requestedPath: decodedPath,
+        docCount: docs.length,
+        samplePaths: docs.slice(0, 5).map((d) => d.filePath),
+      });
+    }
   } catch {
+    logFileProxy("warehouse_docs_error", {
+      caseId,
+      bankName: auditCase.bankName,
+      requestedPath: decodedPath,
+    });
     return NextResponse.json({ error: "Upstream error" }, { status: 502 });
   }
 
   if (!allowed) {
+    logFileProxy("forbidden_not_in_case_docs", {
+      caseId,
+      bankName: auditCase.bankName,
+      decodedPath,
+    });
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -79,6 +110,7 @@ export async function GET(
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Download failed";
+    logFileProxy("download_error", { caseId, decodedPath, error: message });
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }

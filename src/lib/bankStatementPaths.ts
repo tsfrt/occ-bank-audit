@@ -4,7 +4,19 @@ const DEFAULT_VOLUME_BASE = "/Volumes/main/tsfrt/occ";
 
 /** Canonical form for comparing /Volumes/... paths (slashes, no trailing slash). */
 export function normalizeVolumePath(filePath: string): string {
-  let s = filePath.trim().replace(/\\/g, "/").replace(/\/+/g, "/");
+  let s = filePath.trim().replace(/\\/g, "/");
+
+  // Paths from notebooks / DB sometimes concatenate volume base with `dbfs:/Volumes/...`,
+  // e.g. `/Volumes/.../occ/dbfs:/Volumes/.../bank_statements/file.jpg`. UC Files API expects
+  // a single `/Volumes/catalog/schema/volume/...` path — keep the segment after `dbfs:`.
+  const dbfsIdx = s.toLowerCase().indexOf("dbfs:");
+  if (dbfsIdx !== -1) {
+    s = s.slice(dbfsIdx + "dbfs:".length);
+    s = s.replace(/^:+/, "");
+  }
+
+  s = s.replace(/\/+/g, "/");
+
   if (!s.startsWith("/")) {
     s = `/${s}`;
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type BankStatementDetails = {
   bank_name?: string;
@@ -76,8 +76,20 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
   const [imgNatural, setImgNatural] = useState<{ w: number; h: number } | null>(
     null
   );
+  const [rasterObjectUrl, setRasterObjectUrl] = useState<string | null>(null);
+  const [rasterFetchError, setRasterFetchError] = useState<string | null>(null);
+  const [rasterFetchLoading, setRasterFetchLoading] = useState(false);
+  const rasterObjectUrlRef = useRef<string | null>(null);
 
   const hasBankName = Boolean(bankName?.trim());
+
+  const revokeRasterObjectUrl = useCallback((): void => {
+    if (rasterObjectUrlRef.current) {
+      URL.revokeObjectURL(rasterObjectUrlRef.current);
+      rasterObjectUrlRef.current = null;
+    }
+    setRasterObjectUrl(null);
+  }, []);
 
   useEffect(() => {
     if (!hasBankName) {
@@ -130,56 +142,114 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
     return `/api/cases/${caseId}/documents/file?p=${encodeURIComponent(p)}`;
   }, [caseId, doc?.filePath]);
 
+  /** Raster previews: fetch explicitly so 403 JSON bodies surface in UI (img onError often hides details). */
+  useEffect(() => {
+    revokeRasterObjectUrl();
+    setRasterFetchError(null);
+    setRasterFetchLoading(false);
+    setImgNatural(null);
+
+    if (!fileUrl || !doc || !isRasterImagePath(doc.filePath)) {
+      return;
+    }
+
+    let cancelled = false;
+    setRasterFetchLoading(true);
+
+    (async () => {
+      console.info("[document-review] raster_fetch_start", {
+        caseId,
+        filePath: doc.filePath,
+        fileUrl,
+      });
+      try {
+        const res = await fetch(fileUrl);
+        const ct = res.headers.get("content-type") ?? "";
+        if (!res.ok) {
+          const text = await res.text();
+          const msg = `HTTP ${res.status} ${res.statusText}: ${text.slice(0, 600)}`;
+          console.error("[document-review] raster_fetch_failed", {
+            caseId,
+            filePath: doc.filePath,
+            fileUrl,
+            status: res.status,
+            bodySnippet: text.slice(0, 400),
+          });
+          if (!cancelled) setRasterFetchError(msg);
+          return;
+        }
+        if (!ct.startsWith("image/")) {
+          const text = await res.text();
+          const msg = `Expected image/*; got "${ct}". ${text.slice(0, 400)}`;
+          console.error("[document-review] raster_fetch_wrong_type", {
+            caseId,
+            filePath: doc.filePath,
+            contentType: ct,
+            bodySnippet: text.slice(0, 300),
+          });
+          if (!cancelled) setRasterFetchError(msg);
+          return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        if (cancelled) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        rasterObjectUrlRef.current = url;
+        setRasterObjectUrl(url);
+        console.info("[document-review] raster_fetch_ok", {
+          caseId,
+          filePath: doc.filePath,
+          bytes: blob.size,
+          contentType: ct,
+        });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Failed to load image";
+        console.error("[document-review] raster_fetch_error", {
+          caseId,
+          filePath: doc.filePath,
+          fileUrl,
+          error: msg,
+        });
+        if (!cancelled) setRasterFetchError(msg);
+      } finally {
+        if (!cancelled) setRasterFetchLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      revokeRasterObjectUrl();
+    };
+  }, [caseId, doc?.filePath, fileUrl, revokeRasterObjectUrl]);
+
   const onImgLoad = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement>) => {
       const el = e.currentTarget;
       setImgNatural({ w: el.naturalWidth, h: el.naturalHeight });
-      console.info("[document-review] image_load_success", {
+      console.info("[document-review] image_decode_success", {
         caseId,
         filePath: doc?.filePath ?? null,
-        fileUrl,
         naturalWidth: el.naturalWidth,
         naturalHeight: el.naturalHeight,
       });
     },
-    [caseId, doc?.filePath, fileUrl]
+    [caseId, doc?.filePath]
   );
 
-  const onImgError = useCallback(
-    async (e: React.SyntheticEvent<HTMLImageElement>) => {
-      const el = e.currentTarget;
-      const src = el.currentSrc || fileUrl || null;
-      console.error("[document-review] image_load_error", {
-        caseId,
-        bankName: bankName?.trim() ?? null,
-        filePath: doc?.filePath ?? null,
-        fileUrl: src,
-      });
-
-      if (!src) return;
-
-      try {
-        const probe = await fetch(src, { method: "GET" });
-        const body = await probe.text();
-        console.error("[document-review] image_probe_response", {
-          caseId,
-          filePath: doc?.filePath ?? null,
-          fileUrl: src,
-          status: probe.status,
-          statusText: probe.statusText,
-          bodySnippet: body.slice(0, 300),
-        });
-      } catch (err) {
-        console.error("[document-review] image_probe_failed", {
-          caseId,
-          filePath: doc?.filePath ?? null,
-          fileUrl: src,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
-    },
-    [bankName, caseId, doc?.filePath, fileUrl]
-  );
+  const onImgDecodeError = useCallback(() => {
+    console.error("[document-review] image_decode_error", {
+      caseId,
+      filePath: doc?.filePath ?? null,
+      rasterObjectUrlPresent: Boolean(rasterObjectUrl),
+    });
+    setRasterFetchError(
+      (prev) =>
+        prev ??
+        "Image failed to decode after download (corrupt file or unsupported format)."
+    );
+  }, [caseId, doc?.filePath, rasterObjectUrl]);
 
   return (
     <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
@@ -248,6 +318,7 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
                     setDocIndex(Number(e.target.value));
                     setSelectedElId(null);
                     setImgNatural(null);
+                    setRasterFetchError(null);
                   }}
                 >
                   {documents.map((d, i) => (
@@ -263,15 +334,39 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
 
             <div className="relative rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-950 overflow-auto max-h-[70vh] flex items-center justify-center">
               {fileUrl && isRasterImagePath(doc.filePath) && (
-                <div className="relative inline-block max-w-full">
+                <div className="relative inline-block max-w-full w-full">
+                  {rasterFetchLoading && (
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 py-8 text-center">
+                      Loading image…
+                    </p>
+                  )}
+                  {rasterFetchError && !rasterFetchLoading && (
+                    <div
+                      className="rounded-md border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-800 dark:text-red-200 whitespace-pre-wrap break-words"
+                      role="alert"
+                    >
+                      <p className="font-medium">Could not load image</p>
+                      <p className="mt-1 text-xs opacity-90">{rasterFetchError}</p>
+                      <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
+                        Open DevTools → Console for lines tagged{" "}
+                        <code className="text-[11px]">[document-review]</code>.
+                        Server logs use{" "}
+                        <code className="text-[11px]">[documents/file]</code>.
+                      </p>
+                    </div>
+                  )}
+                  {!rasterFetchLoading && !rasterFetchError && rasterObjectUrl && (
+                    <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={fileUrl}
+                    src={rasterObjectUrl}
                     alt={doc.fileName ?? "Statement"}
                     className="max-w-full h-auto block"
                     onLoad={onImgLoad}
-                    onError={onImgError}
+                    onError={onImgDecodeError}
                   />
+                    </>
+                  )}
                   {imgNatural &&
                     doc.parsedElements
                       .filter((pe) => pe.pageId === 0 && pe.bbox)
