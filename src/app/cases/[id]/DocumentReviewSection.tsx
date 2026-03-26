@@ -134,8 +134,51 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
     (e: React.SyntheticEvent<HTMLImageElement>) => {
       const el = e.currentTarget;
       setImgNatural({ w: el.naturalWidth, h: el.naturalHeight });
+      console.info("[document-review] image_load_success", {
+        caseId,
+        filePath: doc?.filePath ?? null,
+        fileUrl,
+        naturalWidth: el.naturalWidth,
+        naturalHeight: el.naturalHeight,
+      });
     },
-    []
+    [caseId, doc?.filePath, fileUrl]
+  );
+
+  const onImgError = useCallback(
+    async (e: React.SyntheticEvent<HTMLImageElement>) => {
+      const el = e.currentTarget;
+      const src = el.currentSrc || fileUrl || null;
+      console.error("[document-review] image_load_error", {
+        caseId,
+        bankName: bankName?.trim() ?? null,
+        filePath: doc?.filePath ?? null,
+        fileUrl: src,
+      });
+
+      if (!src) return;
+
+      try {
+        const probe = await fetch(src, { method: "GET" });
+        const body = await probe.text();
+        console.error("[document-review] image_probe_response", {
+          caseId,
+          filePath: doc?.filePath ?? null,
+          fileUrl: src,
+          status: probe.status,
+          statusText: probe.statusText,
+          bodySnippet: body.slice(0, 300),
+        });
+      } catch (err) {
+        console.error("[document-review] image_probe_failed", {
+          caseId,
+          filePath: doc?.filePath ?? null,
+          fileUrl: src,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    },
+    [bankName, caseId, doc?.filePath, fileUrl]
   );
 
   return (
@@ -227,6 +270,7 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
                     alt={doc.fileName ?? "Statement"}
                     className="max-w-full h-auto block"
                     onLoad={onImgLoad}
+                    onError={onImgError}
                   />
                   {imgNatural &&
                     doc.parsedElements
