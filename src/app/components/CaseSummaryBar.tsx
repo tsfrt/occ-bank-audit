@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { UserAvatar } from "./UserAvatar";
 
-const STORAGE_KEY = "occ-workload-analytics-collapsed";
-
 type Summary = {
   total: number;
   byStatus: Record<string, number>;
@@ -42,26 +40,26 @@ function MetricCard({
 }) {
   const accentStyles = {
     default:
-      "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80",
+      "border-zinc-200/80 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/80 shadow-sm",
     muted:
-      "border-zinc-100 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-800/50",
+      "border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50",
     emphasis:
-      "border-zinc-300 dark:border-zinc-600 bg-zinc-100/90 dark:bg-zinc-700/50",
+      "border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/30 shadow-sm",
   };
   return (
     <div
       className={
-        "rounded-lg border px-4 py-3 min-w-0 " + (accentStyles[accent ?? "default"])
+        "rounded-xl border px-4 py-3 min-w-0 transition-colors " + (accentStyles[accent ?? "default"])
       }
     >
-      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400 truncate">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400 truncate">
         {label}
       </p>
-      <p className="mt-0.5 text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+      <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
         {value}
       </p>
       {sublabel && (
-        <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
           {sublabel}
         </p>
       )}
@@ -69,24 +67,10 @@ function MetricCard({
   );
 }
 
-function getStoredCollapsed(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    const v = localStorage.getItem(STORAGE_KEY);
-    return v === "true";
-  } catch {
-    return false;
-  }
-}
-
 export function CaseSummaryBar() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    setCollapsed(getStoredCollapsed());
-  }, []);
+  const [collapsed, setCollapsed] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -107,13 +91,7 @@ export function CaseSummaryBar() {
   }, []);
 
   const toggleCollapsed = () => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(STORAGE_KEY, String(next));
-      } catch {}
-      return next;
-    });
+    setCollapsed((prev) => !prev);
   };
 
   if (loading) {
@@ -150,13 +128,13 @@ export function CaseSummaryBar() {
     analytics.avgRiskScore != null || analytics.avgAiConfidencePercent != null;
 
   return (
-    <div className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/95 px-4 py-2 shadow-sm">
+    <div className="border-b border-zinc-200 dark:border-zinc-800 bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-900/95 px-4 py-2 shadow-sm">
       <div className="max-w-7xl mx-auto flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1 space-y-4">
           <button
             type="button"
             onClick={toggleCollapsed}
-            className="flex w-full items-center justify-between gap-2 rounded-md py-2 text-left hover:bg-zinc-100/80 dark:hover:bg-zinc-800/50 -mx-2 px-2 transition-colors"
+            className="flex w-full items-center justify-between gap-2 rounded-lg py-2 text-left hover:bg-zinc-100/80 dark:hover:bg-zinc-800/50 -mx-2 px-2 transition-colors"
             aria-expanded={!collapsed}
           >
             <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
