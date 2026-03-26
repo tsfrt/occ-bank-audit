@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { AUDIT_TYPE_LABELS } from "@/lib/auditTypes";
 import { DocumentReviewSection } from "./DocumentReviewSection";
+import { MeetingMinutesSection } from "./MeetingMinutesSection";
 import { ReassignAuditor } from "./ReassignAuditor";
 
 const statusLabels: Record<string, string> = {
@@ -124,6 +125,12 @@ export default async function CaseDetailPage({
         </section>
 
         <DocumentReviewSection
+          caseId={auditCase.id}
+          bankName={auditCase.bankName}
+          bankId={auditCase.bankId}
+        />
+
+        <MeetingMinutesSection
           caseId={auditCase.id}
           bankName={auditCase.bankName}
           bankId={auditCase.bankId}

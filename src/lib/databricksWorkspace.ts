@@ -139,3 +139,20 @@ export function getBankStatementAllowlistPrefix(): string {
   }
   return "/Volumes/main/tsfrt/occ/bank_statements";
 }
+
+/**
+ * Prefix every served meeting-minute audio path must match.
+ * Override with MEETING_MINUTES_ALLOWLIST_PREFIX, or derive from BANK_STATEMENTS_VOLUME_BASE_PATH + /meeting_minutes/.
+ */
+export function getMeetingMinutesAllowlistPrefix(): string {
+  const explicit = process.env.MEETING_MINUTES_ALLOWLIST_PREFIX?.trim();
+  if (explicit) {
+    return explicit.endsWith("/") ? explicit.slice(0, -1) : explicit;
+  }
+  const base = process.env.BANK_STATEMENTS_VOLUME_BASE_PATH?.trim();
+  if (base) {
+    const b = base.replace(/\/$/, "");
+    return `${b}/meeting_minutes`;
+  }
+  return "/Volumes/main/tsfrt/occ/meeting_minutes";
+}

@@ -1,4 +1,7 @@
-import { getBankStatementAllowlistPrefix } from "@/lib/databricksWorkspace";
+import {
+  getBankStatementAllowlistPrefix,
+  getMeetingMinutesAllowlistPrefix,
+} from "@/lib/databricksWorkspace";
 
 const DEFAULT_VOLUME_BASE = "/Volumes/main/tsfrt/occ";
 
@@ -46,6 +49,40 @@ export function resolveBankStatementFilePath(filePath: string): string {
  */
 export function isUnderBankStatementAllowlist(resolvedPath: string): boolean {
   const prefix = getBankStatementAllowlistPrefix();
+  const p = normalizeVolumePath(resolvedPath);
+  const pre = normalizeVolumePath(prefix);
+  if (p === pre) return true;
+  return p.startsWith(`${pre}/`);
+}
+
+const MEETING_MINUTES_DIR = "meeting_minutes";
+
+function volumeBasePath(): string {
+  return (
+    process.env.BANK_STATEMENTS_VOLUME_BASE_PATH?.trim().replace(
+      /\/+$/,
+      ""
+    ) ?? DEFAULT_VOLUME_BASE
+  );
+}
+
+/**
+ * Resolve meeting_analysis.file_name (or absolute /Volumes/... path) to UC Files path.
+ * Relative names are resolved under {volume_base}/meeting_minutes/ using basename only.
+ */
+export function resolveMeetingMinuteFilePath(fileNameOrAbsolute: string): string {
+  const raw = fileNameOrAbsolute.trim();
+  if (!raw) return raw;
+  if (raw.startsWith("/Volumes/")) {
+    return normalizeVolumePath(raw);
+  }
+  const base = volumeBasePath();
+  const safeName = raw.split(/[/\\]/).filter(Boolean).pop() ?? raw;
+  return normalizeVolumePath(`${base}/${MEETING_MINUTES_DIR}/${safeName}`);
+}
+
+export function isUnderMeetingMinutesAllowlist(resolvedPath: string): boolean {
+  const prefix = getMeetingMinutesAllowlistPrefix();
   const p = normalizeVolumePath(resolvedPath);
   const pre = normalizeVolumePath(prefix);
   if (p === pre) return true;

@@ -135,3 +135,34 @@ export function parseDetailsStruct(raw: unknown): BankStatementDetails | null {
       o.total_balance != null ? String(o.total_balance) : undefined,
   };
 }
+
+export type MeetingMinuteDetails = {
+  people?: string;
+  main_topics?: string;
+  action_items?: string;
+};
+
+/** Struct from main.tsfrt.meeting_analysis.details */
+export function parseMeetingDetailsStruct(
+  raw: unknown
+): MeetingMinuteDetails | null {
+  const v = parseJsonIfString(raw);
+  if (v == null) return null;
+  if (typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  return {
+    people: o.people != null ? String(o.people) : undefined,
+    main_topics:
+      o.main_topics != null
+        ? String(o.main_topics)
+        : o.mainTopics != null
+          ? String(o.mainTopics)
+          : undefined,
+    action_items:
+      o.action_items != null
+        ? String(o.action_items)
+        : o.actionItems != null
+          ? String(o.actionItems)
+          : undefined,
+  };
+}
