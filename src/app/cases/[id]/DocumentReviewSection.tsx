@@ -109,6 +109,7 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
   const [imgNatural, setImgNatural] = useState<{ w: number; h: number } | null>(
     null
   );
+  /** Laid-out size of the statement <img> (for bbox math with object-contain). */
   const [imgLayoutSize, setImgLayoutSize] = useState<{
     cw: number;
     ch: number;
@@ -255,6 +256,7 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
     return `/api/cases/${caseId}/documents/file?p=${encodeURIComponent(p)}`;
   }, [caseId, doc?.filePath]);
 
+  /** Raster previews: fetch explicitly so 403 JSON bodies surface in UI (img onError often hides details). */
   useEffect(() => {
     revokeRasterObjectUrl();
     setRasterFetchError(null);
