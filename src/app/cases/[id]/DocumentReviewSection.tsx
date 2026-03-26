@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type BankStatementDetails = {
   bank_name?: string;
@@ -61,13 +61,46 @@ function isRasterImagePath(path: string): boolean {
   );
 }
 
+function getFullscreenElement(): Element | null {
+  const d = document as Document & {
+    webkitFullscreenElement?: Element | null;
+  };
+  return document.fullscreenElement ?? d.webkitFullscreenElement ?? null;
+}
+
+/**
+ * Where the bitmap is drawn inside a laid-out <img> with object-fit: contain
+ * (same math as CSS object-fit: contain). Coordinates are relative to the
+ * element's content box (clientWidth × clientHeight).
+ */
+function objectFitContainContentRect(
+  clientW: number,
+  clientH: number,
+  naturalW: number,
+  naturalH: number
+): { ox: number; oy: number; rw: number; rh: number } {
+  if (naturalW <= 0 || naturalH <= 0 || clientW <= 0 || clientH <= 0) {
+    return { ox: 0, oy: 0, rw: clientW, rh: clientH };
+  }
+  const ir = naturalW / naturalH;
+  const cr = clientW / clientH;
+  if (ir > cr) {
+    const rw = clientW;
+    const rh = clientW / ir;
+    return { ox: 0, oy: (clientH - rh) / 2, rw, rh };
+  }
+  const rh = clientH;
+  const rw = clientH * ir;
+  return { ox: (clientW - rw) / 2, oy: 0, rw, rh };
+}
+
 type Props = {
   caseId: string;
   bankName: string | null | undefined;
-  auditType: string | null | undefined;
+  bankId: string;
 };
 
-export function DocumentReviewSection({ caseId, bankName, auditType }: Props) {
+export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,13 +109,106 @@ export function DocumentReviewSection({ caseId, bankName, auditType }: Props) {
   const [imgNatural, setImgNatural] = useState<{ w: number; h: number } | null>(
     null
   );
+  /** Laid-out size of the statement <img> (for bbox math with object-contain). */
+  const [imgLayoutSize, setImgLayoutSize] = useState<{
+    cw: number;
+    ch: number;
+  } | null>(null);
+  const statementImgRef = useRef<HTMLImageElement | null>(null);
+  const [rasterObjectUrl, setRasterObjectUrl] = useState<string | null>(null);
+  const [rasterFetchError, setRasterFetchError] = useState<string | null>(null);
+  const [rasterFetchLoading, setRasterFetchLoading] = useState(false);
+  const rasterObjectUrlRef = useRef<string | null>(null);
+  const previewFullscreenRef = useRef<HTMLDivElement | null>(null);
+  const [isDocFullscreen, setIsDocFullscreen] = useState(false);
 
-  const show =
-    auditType === "bank_statement_analysis" && bankName?.trim().length;
+  const hasBankName = Boolean(bankName?.trim());
 
   useEffect(() => {
-    if (!show) {
+    const sync = () => {
+      const el = previewFullscreenRef.current;
+      setIsDocFullscreen(Boolean(el && getFullscreenElement() === el));
+    };
+    document.addEventListener("fullscreenchange", sync);
+    document.addEventListener("webkitfullscreenchange", sync);
+    return () => {
+      document.removeEventListener("fullscreenchange", sync);
+      document.removeEventListener("webkitfullscreenchange", sync);
+    };
+  }, []);
+
+  const syncStatementImgLayout = useCallback(() => {
+    const el = statementImgRef.current;
+    if (!el || el.naturalWidth <= 0) return;
+    const cw = el.clientWidth;
+    const ch = el.clientHeight;
+    if (cw > 0 && ch > 0) {
+      setImgLayoutSize({ cw, ch });
+    }
+  }, []);
+
+  useEffect(() => {
+    const bump = () => {
+      requestAnimationFrame(() => {
+        syncStatementImgLayout();
+        requestAnimationFrame(() => syncStatementImgLayout());
+      });
+    };
+    document.addEventListener("fullscreenchange", bump);
+    document.addEventListener("webkitfullscreenchange", bump);
+    return () => {
+      document.removeEventListener("fullscreenchange", bump);
+      document.removeEventListener("webkitfullscreenchange", bump);
+    };
+  }, [syncStatementImgLayout]);
+
+  useEffect(() => {
+    const el = statementImgRef.current;
+    if (!el || !rasterObjectUrl) return;
+    const ro = new ResizeObserver(() => syncStatementImgLayout());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [rasterObjectUrl, syncStatementImgLayout]);
+
+  const toggleDocFullscreen = useCallback(async () => {
+    const el = previewFullscreenRef.current;
+    if (!el) return;
+    try {
+      if (getFullscreenElement() === el) {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else {
+          const d = document as Document & {
+            webkitExitFullscreen?: () => Promise<void>;
+          };
+          await d.webkitExitFullscreen?.();
+        }
+      } else if (el.requestFullscreen) {
+        await el.requestFullscreen();
+      } else {
+        const w = el as HTMLDivElement & {
+          webkitRequestFullscreen?: () => Promise<void>;
+        };
+        await w.webkitRequestFullscreen?.();
+      }
+    } catch {
+      // User gesture / browser policy; ignore.
+    }
+  }, []);
+
+  const revokeRasterObjectUrl = useCallback((): void => {
+    if (rasterObjectUrlRef.current) {
+      URL.revokeObjectURL(rasterObjectUrlRef.current);
+      rasterObjectUrlRef.current = null;
+    }
+    setRasterObjectUrl(null);
+  }, []);
+
+  useEffect(() => {
+    if (!hasBankName) {
       setLoading(false);
+      setDocuments([]);
+      setLoadError(null);
       return;
     }
     let cancelled = false;
@@ -106,6 +232,7 @@ export function DocumentReviewSection({ caseId, bankName, auditType }: Props) {
           setDocIndex(0);
           setSelectedElId(null);
           setImgNatural(null);
+          setImgLayoutSize(null);
         }
       } catch (e) {
         if (!cancelled) {
@@ -119,7 +246,7 @@ export function DocumentReviewSection({ caseId, bankName, auditType }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [caseId, show]);
+  }, [caseId, hasBankName]);
 
   const doc = documents[docIndex] ?? null;
 
@@ -129,17 +256,123 @@ export function DocumentReviewSection({ caseId, bankName, auditType }: Props) {
     return `/api/cases/${caseId}/documents/file?p=${encodeURIComponent(p)}`;
   }, [caseId, doc?.filePath]);
 
+  /** Raster previews: fetch explicitly so 403 JSON bodies surface in UI (img onError often hides details). */
+  useEffect(() => {
+    revokeRasterObjectUrl();
+    setRasterFetchError(null);
+    setRasterFetchLoading(false);
+    setImgNatural(null);
+    setImgLayoutSize(null);
+
+    if (!fileUrl || !doc || !isRasterImagePath(doc.filePath)) {
+      return;
+    }
+
+    let cancelled = false;
+    setRasterFetchLoading(true);
+
+    (async () => {
+      console.info("[document-review] raster_fetch_start", {
+        caseId,
+        filePath: doc.filePath,
+        fileUrl,
+      });
+      try {
+        const res = await fetch(fileUrl);
+        const ct = res.headers.get("content-type") ?? "";
+        if (!res.ok) {
+          const text = await res.text();
+          const msg = `HTTP ${res.status} ${res.statusText}: ${text.slice(0, 600)}`;
+          console.error("[document-review] raster_fetch_failed", {
+            caseId,
+            filePath: doc.filePath,
+            fileUrl,
+            status: res.status,
+            bodySnippet: text.slice(0, 400),
+          });
+          if (!cancelled) setRasterFetchError(msg);
+          return;
+        }
+        if (!ct.startsWith("image/")) {
+          const text = await res.text();
+          const msg = `Expected image/*; got "${ct}". ${text.slice(0, 400)}`;
+          console.error("[document-review] raster_fetch_wrong_type", {
+            caseId,
+            filePath: doc.filePath,
+            contentType: ct,
+            bodySnippet: text.slice(0, 300),
+          });
+          if (!cancelled) setRasterFetchError(msg);
+          return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        if (cancelled) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        rasterObjectUrlRef.current = url;
+        setRasterObjectUrl(url);
+        console.info("[document-review] raster_fetch_ok", {
+          caseId,
+          filePath: doc.filePath,
+          bytes: blob.size,
+          contentType: ct,
+        });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Failed to load image";
+        console.error("[document-review] raster_fetch_error", {
+          caseId,
+          filePath: doc.filePath,
+          fileUrl,
+          error: msg,
+        });
+        if (!cancelled) setRasterFetchError(msg);
+      } finally {
+        if (!cancelled) setRasterFetchLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      revokeRasterObjectUrl();
+    };
+  }, [caseId, doc?.filePath, fileUrl, revokeRasterObjectUrl]);
+
   const onImgLoad = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement>) => {
       const el = e.currentTarget;
       setImgNatural({ w: el.naturalWidth, h: el.naturalHeight });
+      requestAnimationFrame(() => {
+        const img = statementImgRef.current;
+        if (img && img.naturalWidth > 0) {
+          const cw = img.clientWidth;
+          const ch = img.clientHeight;
+          if (cw > 0 && ch > 0) setImgLayoutSize({ cw, ch });
+        }
+      });
+      console.info("[document-review] image_decode_success", {
+        caseId,
+        filePath: doc?.filePath ?? null,
+        naturalWidth: el.naturalWidth,
+        naturalHeight: el.naturalHeight,
+      });
     },
-    []
+    [caseId, doc?.filePath]
   );
 
-  if (!show) {
-    return null;
-  }
+  const onImgDecodeError = useCallback(() => {
+    console.error("[document-review] image_decode_error", {
+      caseId,
+      filePath: doc?.filePath ?? null,
+      rasterObjectUrlPresent: Boolean(rasterObjectUrl),
+    });
+    setRasterFetchError(
+      (prev) =>
+        prev ??
+        "Image failed to decode after download (corrupt file or unsupported format)."
+    );
+  }, [caseId, doc?.filePath, rasterObjectUrl]);
 
   return (
     <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
@@ -147,21 +380,55 @@ export function DocumentReviewSection({ caseId, bankName, auditType }: Props) {
         Document review
       </h2>
 
-      {loading && (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
-      )}
-
-      {!loading && loadError && (
-        <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
-      )}
-
-      {!loading && !loadError && documents.length === 0 && (
+      {!hasBankName && (
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          No bank statement files found in the warehouse for this bank name.
+          This case has no bank name. Add a bank name that matches (case-insensitive){" "}
+          <code className="text-xs bg-zinc-100 dark:bg-zinc-800 px-1 rounded">
+            main.tsfrt.bank_statement_analysis.bank_name
+          </code>{" "}
+          to load statement files.
         </p>
       )}
 
-      {!loading && !loadError && documents.length > 0 && doc && (
+      {hasBankName && (
+        <div className="mb-4 rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 px-3 py-2 text-sm">
+          <p className="text-zinc-600 dark:text-zinc-300">
+            <span className="font-medium text-zinc-800 dark:text-zinc-200">
+              Case bank name:
+            </span>{" "}
+            {bankName?.trim()}
+          </p>
+          <p className="text-zinc-600 dark:text-zinc-300 mt-1">
+            <span className="font-medium text-zinc-800 dark:text-zinc-200">
+              Case bank ID:
+            </span>{" "}
+            <code className="text-xs">{bankId}</code>
+          </p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+            Warehouse rows are matched with{" "}
+            <code className="text-[11px] bg-zinc-100 dark:bg-zinc-800 px-1 rounded">
+              LOWER(TRIM(bank_name))
+            </code>{" "}
+            (case-insensitive).
+          </p>
+        </div>
+      )}
+
+      {hasBankName && loading && (
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
+      )}
+
+      {hasBankName && !loading && loadError && (
+        <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
+      )}
+
+      {hasBankName && !loading && !loadError && documents.length === 0 && (
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          No bank statement files found in the warehouse for this bank name (case-insensitive match).
+        </p>
+      )}
+
+      {hasBankName && !loading && !loadError && documents.length > 0 && doc && (
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="lg:w-1/2 space-y-3 min-w-0">
             {documents.length > 1 && (
@@ -174,36 +441,100 @@ export function DocumentReviewSection({ caseId, bankName, auditType }: Props) {
                     setDocIndex(Number(e.target.value));
                     setSelectedElId(null);
                     setImgNatural(null);
+                    setImgLayoutSize(null);
+                    setRasterFetchError(null);
                   }}
                 >
                   {documents.map((d, i) => (
                     <option key={`${d.filePath}-${i}`} value={i}>
-                      {d.fileName || d.filePath}
+                      {[d.fileName || d.filePath, d.bankName ? ` · ${d.bankName}` : ""]
+                        .filter(Boolean)
+                        .join("")}
                     </option>
                   ))}
                 </select>
               </label>
             )}
 
-            <div className="relative rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-950 overflow-auto max-h-[70vh] flex items-center justify-center">
+            <div
+              ref={previewFullscreenRef}
+              className="group/preview relative flex max-h-[70vh] min-h-[160px] flex-col overflow-hidden rounded-md border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-950 [&:fullscreen]:fixed [&:fullscreen]:inset-0 [&:fullscreen]:z-[100] [&:fullscreen]:max-h-none [&:fullscreen]:min-h-0 [&:fullscreen]:h-screen [&:fullscreen]:w-screen [&:fullscreen]:rounded-none [&:fullscreen]:border-0 [&:fullscreen]:bg-zinc-950 [&:fullscreen_.document-review-img]:max-h-[min(calc(100dvh-5rem),100%)] [&:fullscreen_.document-review-img]:w-auto [&:fullscreen_.document-review-img]:object-contain"
+            >
+              {fileUrl && (
+                <div className="pointer-events-none absolute right-2 top-2 z-20 flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    title={
+                      isDocFullscreen
+                        ? "Exit full screen (Esc)"
+                        : "View document full screen"
+                    }
+                    onClick={() => void toggleDocFullscreen()}
+                    className="pointer-events-auto rounded-md border border-zinc-300 bg-white/95 px-2.5 py-1 text-xs font-medium text-zinc-800 shadow-sm backdrop-blur-sm hover:bg-white dark:border-zinc-600 dark:bg-zinc-900/95 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    {isDocFullscreen ? "Exit full screen" : "Full screen"}
+                  </button>
+                </div>
+              )}
+              <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-2 pt-10">
               {fileUrl && isRasterImagePath(doc.filePath) && (
                 <div className="relative inline-block max-w-full">
+                  {rasterFetchLoading && (
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 py-8 text-center">
+                      Loading image…
+                    </p>
+                  )}
+                  {rasterFetchError && !rasterFetchLoading && (
+                    <div
+                      className="rounded-md border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-800 dark:text-red-200 whitespace-pre-wrap break-words"
+                      role="alert"
+                    >
+                      <p className="font-medium">Could not load image</p>
+                      <p className="mt-1 text-xs opacity-90">{rasterFetchError}</p>
+                      <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
+                        Open DevTools → Console for lines tagged{" "}
+                        <code className="text-[11px]">[document-review]</code>.
+                        Server logs use{" "}
+                        <code className="text-[11px]">[documents/file]</code>.
+                      </p>
+                    </div>
+                  )}
+                  {!rasterFetchLoading && !rasterFetchError && rasterObjectUrl && (
+                    <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={fileUrl}
+                    ref={statementImgRef}
+                    src={rasterObjectUrl}
                     alt={doc.fileName ?? "Statement"}
-                    className="max-w-full h-auto block"
+                    className="document-review-img max-h-full max-w-full h-auto object-contain"
                     onLoad={onImgLoad}
+                    onError={onImgDecodeError}
                   />
+                    </>
+                  )}
                   {imgNatural &&
+                    imgLayoutSize &&
+                    imgLayoutSize.cw > 0 &&
+                    imgLayoutSize.ch > 0 &&
                     doc.parsedElements
                       .filter((pe) => pe.pageId === 0 && pe.bbox)
                       .map((pe) => {
                         const b = pe.bbox!;
-                        const leftPct = (b.left / imgNatural.w) * 100;
-                        const topPct = (b.top / imgNatural.h) * 100;
-                        const wPct = (b.width / imgNatural.w) * 100;
-                        const hPct = (b.height / imgNatural.h) * 100;
+                        const { ox, oy, rw, rh } = objectFitContainContentRect(
+                          imgLayoutSize.cw,
+                          imgLayoutSize.ch,
+                          imgNatural.w,
+                          imgNatural.h
+                        );
+                        const cw = imgLayoutSize.cw;
+                        const ch = imgLayoutSize.ch;
+                        const leftPct =
+                          ((ox + (b.left / imgNatural.w) * rw) / cw) * 100;
+                        const topPct =
+                          ((oy + (b.top / imgNatural.h) * rh) / ch) * 100;
+                        const wPct = ((b.width / imgNatural.w) * rw) / cw * 100;
+                        const hPct =
+                          ((b.height / imgNatural.h) * rh) / ch * 100;
                         const active = selectedElId === pe.id;
                         return (
                           <button
@@ -258,6 +589,7 @@ export function DocumentReviewSection({ caseId, bankName, auditType }: Props) {
                     </a>
                   </div>
                 )}
+              </div>
             </div>
             {doc.fileSize != null && (
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -267,6 +599,24 @@ export function DocumentReviewSection({ caseId, bankName, auditType }: Props) {
           </div>
 
           <div className="lg:w-1/2 min-w-0 space-y-4">
+            {doc.bankName && (
+              <div>
+                <h3 className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
+                  Warehouse bank name
+                </h3>
+                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                  {doc.bankName}
+                </p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  Value from{" "}
+                  <code className="text-[11px] bg-zinc-100 dark:bg-zinc-800 px-1 rounded">
+                    bank_statement_analysis.bank_name
+                  </code>{" "}
+                  for this file.
+                </p>
+              </div>
+            )}
+
             {doc.details && (
               <div>
                 <h3 className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
@@ -276,7 +626,7 @@ export function DocumentReviewSection({ caseId, bankName, auditType }: Props) {
                   {doc.details.bank_name != null && (
                     <>
                       <dt className="text-zinc-500 dark:text-zinc-400">
-                        Bank (details)
+                        Bank (details struct)
                       </dt>
                       <dd>{doc.details.bank_name || "—"}</dd>
                     </>

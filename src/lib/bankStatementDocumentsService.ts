@@ -58,7 +58,7 @@ SELECT
   bank_name,
   parsed_content
 FROM main.tsfrt.bank_statement_analysis
-WHERE bank_name = '${escapeSqlString(bankName)}'
+WHERE LOWER(TRIM(bank_name)) = LOWER(TRIM('${escapeSqlString(bankName.trim())}'))
 `.trim();
 
   const rows = await executeSql(warehouseId, q);

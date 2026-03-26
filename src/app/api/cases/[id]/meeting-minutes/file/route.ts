@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { fromBase64Url } from "@/lib/base64url";
-import { fetchBankStatementDocuments } from "@/lib/bankStatementDocumentsService";
+import { fetchMeetingMinutes } from "@/lib/meetingMinutesService";
 import {
-  isUnderBankStatementAllowlist,
+  isUnderMeetingMinutesAllowlist,
   normalizeVolumePath,
 } from "@/lib/bankStatementPaths";
 import { downloadVolumeFile } from "@/lib/databricksVolumeFiles";
@@ -11,17 +11,12 @@ import { downloadVolumeFile } from "@/lib/databricksVolumeFiles";
 export const dynamic = "force-dynamic";
 
 function logFileProxy(event: string, details: Record<string, unknown>): void {
-  console.error("[documents/file]", event, JSON.stringify(details));
+  console.error("[meeting-minutes/file]", event, JSON.stringify(details));
 }
 
 function contentTypeForPath(filePath: string): string {
   const lower = filePath.toLowerCase();
-  if (lower.endsWith(".pdf")) return "application/pdf";
-  if (lower.endsWith(".png")) return "image/png";
-  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
-  if (lower.endsWith(".gif")) return "image/gif";
-  if (lower.endsWith(".webp")) return "image/webp";
-  if (lower.endsWith(".tif") || lower.endsWith(".tiff")) return "image/tiff";
+  if (lower.endsWith(".mp3")) return "audio/mpeg";
   return "application/octet-stream";
 }
 
@@ -56,7 +51,7 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (!isUnderBankStatementAllowlist(decodedPath)) {
+  if (!isUnderMeetingMinutesAllowlist(decodedPath)) {
     logFileProxy("forbidden_allowlist", {
       caseId,
       bankName: auditCase.bankName,
@@ -67,21 +62,21 @@ export async function GET(
 
   let allowed = false;
   try {
-    const docs = await fetchBankStatementDocuments(auditCase.bankName.trim());
-    allowed = docs.some(
-      (d) => normalizeVolumePath(d.filePath) === decodedPath
+    const meetings = await fetchMeetingMinutes(auditCase.bankName.trim());
+    allowed = meetings.some(
+      (m) => normalizeVolumePath(m.filePath) === decodedPath
     );
     if (!allowed) {
-      logFileProxy("warehouse_docs_no_match", {
+      logFileProxy("warehouse_meetings_no_match", {
         caseId,
         bankName: auditCase.bankName,
         requestedPath: decodedPath,
-        docCount: docs.length,
-        samplePaths: docs.slice(0, 5).map((d) => d.filePath),
+        count: meetings.length,
+        samplePaths: meetings.slice(0, 5).map((m) => m.filePath),
       });
     }
   } catch {
-    logFileProxy("warehouse_docs_error", {
+    logFileProxy("warehouse_meetings_error", {
       caseId,
       bankName: auditCase.bankName,
       requestedPath: decodedPath,
@@ -90,7 +85,7 @@ export async function GET(
   }
 
   if (!allowed) {
-    logFileProxy("forbidden_not_in_case_docs", {
+    logFileProxy("forbidden_not_in_case_meetings", {
       caseId,
       bankName: auditCase.bankName,
       decodedPath,
