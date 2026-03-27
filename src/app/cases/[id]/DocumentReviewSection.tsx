@@ -124,6 +124,8 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
     null
   );
   const [supervisionTruncated, setSupervisionTruncated] = useState(false);
+  const supervisionPaneRef = useRef<HTMLDivElement | null>(null);
+  const [isSupervisionFullscreen, setIsSupervisionFullscreen] = useState(false);
   const rasterObjectUrlRef = useRef<string | null>(null);
   const previewFullscreenRef = useRef<HTMLDivElement | null>(null);
   const [isDocFullscreen, setIsDocFullscreen] = useState(false);
@@ -141,6 +143,45 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
       document.removeEventListener("fullscreenchange", sync);
       document.removeEventListener("webkitfullscreenchange", sync);
     };
+  }, []);
+
+  useEffect(() => {
+    const sync = () => {
+      const el = supervisionPaneRef.current;
+      setIsSupervisionFullscreen(Boolean(el && getFullscreenElement() === el));
+    };
+    document.addEventListener("fullscreenchange", sync);
+    document.addEventListener("webkitfullscreenchange", sync);
+    return () => {
+      document.removeEventListener("fullscreenchange", sync);
+      document.removeEventListener("webkitfullscreenchange", sync);
+    };
+  }, []);
+
+  const toggleSupervisionFullscreen = useCallback(async () => {
+    const el = supervisionPaneRef.current;
+    if (!el) return;
+    try {
+      if (getFullscreenElement() === el) {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else {
+          const d = document as Document & {
+            webkitExitFullscreen?: () => Promise<void>;
+          };
+          await d.webkitExitFullscreen?.();
+        }
+      } else if (el.requestFullscreen) {
+        await el.requestFullscreen();
+      } else {
+        const w = el as HTMLDivElement & {
+          webkitRequestFullscreen?: () => Promise<void>;
+        };
+        await w.webkitRequestFullscreen?.();
+      }
+    } catch {
+      // User gesture / browser policy; ignore.
+    }
   }, []);
 
   const syncStatementImgLayout = useCallback(() => {
@@ -773,13 +814,27 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
                 </p>
               )}
               {supervisionFeedback != null && supervisionFeedback !== "" && (
-                <div className="mt-3 rounded-md border border-card-border bg-section-bg p-3">
-                  <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
-                    Agent feedback
-                  </p>
-                  <p className="text-sm whitespace-pre-wrap text-foreground">
-                    {supervisionFeedback}
-                  </p>
+                <div
+                  ref={supervisionPaneRef}
+                  className="mt-3 rounded-md border border-card-border bg-section-bg flex flex-col [&:fullscreen]:fixed [&:fullscreen]:inset-0 [&:fullscreen]:z-[100] [&:fullscreen]:rounded-none [&:fullscreen]:border-0 [&:fullscreen]:bg-white [&:fullscreen]:dark:bg-gray-900"
+                >
+                  <div className="flex items-center justify-between px-3 pt-3 pb-1">
+                    <p className="text-xs font-semibold text-muted uppercase tracking-wider">
+                      Agent feedback
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void toggleSupervisionFullscreen()}
+                      className="rounded-md border border-card-border bg-card-bg/95 px-2 py-0.5 text-xs font-medium text-foreground hover:bg-card-bg"
+                    >
+                      {isSupervisionFullscreen ? "Exit full screen" : "Full screen"}
+                    </button>
+                  </div>
+                  <div className={`overflow-y-auto px-3 pb-3 ${isSupervisionFullscreen ? "" : "max-h-64"}`}>
+                    <p className="text-sm whitespace-pre-wrap text-foreground">
+                      {supervisionFeedback}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
