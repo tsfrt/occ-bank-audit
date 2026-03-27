@@ -118,6 +118,12 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
   const [rasterObjectUrl, setRasterObjectUrl] = useState<string | null>(null);
   const [rasterFetchError, setRasterFetchError] = useState<string | null>(null);
   const [rasterFetchLoading, setRasterFetchLoading] = useState(false);
+  const [supervisionLoading, setSupervisionLoading] = useState(false);
+  const [supervisionError, setSupervisionError] = useState<string | null>(null);
+  const [supervisionFeedback, setSupervisionFeedback] = useState<string | null>(
+    null
+  );
+  const [supervisionTruncated, setSupervisionTruncated] = useState(false);
   const rasterObjectUrlRef = useRef<string | null>(null);
   const previewFullscreenRef = useRef<HTMLDivElement | null>(null);
   const [isDocFullscreen, setIsDocFullscreen] = useState(false);
@@ -338,6 +344,46 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
       revokeRasterObjectUrl();
     };
   }, [caseId, doc?.filePath, fileUrl, revokeRasterObjectUrl]);
+
+  useEffect(() => {
+    setSupervisionError(null);
+    setSupervisionFeedback(null);
+    setSupervisionTruncated(false);
+  }, [docIndex, doc?.filePath]);
+
+  const runBankSupervisionReview = useCallback(async () => {
+    if (!doc?.filePath) return;
+    setSupervisionLoading(true);
+    setSupervisionError(null);
+    setSupervisionFeedback(null);
+    setSupervisionTruncated(false);
+    try {
+      const res = await fetch(
+        `/api/cases/${caseId}/documents/supervision-review`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filePath: doc.filePath }),
+        }
+      );
+      const data = (await res.json()) as {
+        feedback?: string;
+        truncated?: boolean;
+        error?: string;
+      };
+      if (!res.ok) {
+        throw new Error(data.error ?? res.statusText);
+      }
+      setSupervisionFeedback(data.feedback ?? "");
+      setSupervisionTruncated(Boolean(data.truncated));
+    } catch (e) {
+      setSupervisionError(
+        e instanceof Error ? e.message : "Supervision review failed"
+      );
+    } finally {
+      setSupervisionLoading(false);
+    }
+  }, [caseId, doc?.filePath]);
 
   const onImgLoad = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -697,6 +743,46 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
                 </ul>
               </div>
             )}
+
+            <div className="border-t border-card-border pt-4">
+              <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
+                Bank supervision review
+              </h3>
+              <p className="text-xs text-muted mb-3">
+                Sends extracted warehouse content (summary, details, parsed
+                elements) to the bank supervision agent on demand.
+              </p>
+              <button
+                type="button"
+                disabled={supervisionLoading}
+                onClick={() => void runBankSupervisionReview()}
+                className="rounded-md border-2 border-card-border bg-section-bg px-3 py-2 text-sm font-medium text-foreground hover:bg-card-bg disabled:opacity-60 disabled:pointer-events-none focus:border-accent focus:outline-none"
+              >
+                {supervisionLoading
+                  ? "Running review…"
+                  : "Run bank supervision review"}
+              </button>
+              {supervisionTruncated && (
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-2">
+                  Some extracted text was truncated before sending to the model.
+                </p>
+              )}
+              {supervisionError && (
+                <p className="text-sm text-error mt-3" role="alert">
+                  {supervisionError}
+                </p>
+              )}
+              {supervisionFeedback != null && supervisionFeedback !== "" && (
+                <div className="mt-3 rounded-md border border-card-border bg-section-bg p-3">
+                  <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
+                    Agent feedback
+                  </p>
+                  <p className="text-sm whitespace-pre-wrap text-foreground">
+                    {supervisionFeedback}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

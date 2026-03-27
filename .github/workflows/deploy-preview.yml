@@ -134,6 +134,19 @@ jobs:
           fi
         continue-on-error: true
 
+      - name: Set Databricks OAuth secrets for app
+        env:
+          OAUTH_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          OAUTH_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
+          if [ -n "$OAUTH_ID" ]; then
+            printf '%s' "$OAUTH_ID" | databricks secrets put-secret ${{ env.SECRET_SCOPE }} databricks-oauth-client-id
+          fi
+          if [ -n "$OAUTH_SECRET" ]; then
+            printf '%s' "$OAUTH_SECRET" | databricks secrets put-secret ${{ env.SECRET_SCOPE }} databricks-oauth-client-secret
+          fi
+        continue-on-error: true
+
       - name: Validate bundle
         run: |
           databricks bundle validate -t preview \
