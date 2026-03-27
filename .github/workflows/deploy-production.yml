@@ -2,8 +2,8 @@
 # Runs Prisma migrations, updates the app's DATABASE_URL secret, then deploys via the asset bundle.
 # The bundle (databricks.yml) defines the app with secret resource and config (replaces app.yaml).
 #
-# Secrets: DATABRICKS_HOST, DATABRICKS_TOKEN, LAKEBASE_DATABASE_URL (or DATABASE_URL),
-#   DATABRICKS_CLIENT_ID + DATABRICKS_CLIENT_SECRET (OAuth; bank supervision + SQL execution).
+# Secrets: DATABRICKS_HOST, DATABRICKS_TOKEN, LAKEBASE_DATABASE_URL (or DATABASE_URL).
+# OAuth for the running app (DATABRICKS_CLIENT_ID / DATABRICKS_CLIENT_SECRET) is supplied by the Databricks Apps environment, not GitHub.
 # Secret scope "bank-audit-app", key "database-url-prod" is set by this workflow and referenced in the bundle.
 
 name: Deploy Production
@@ -78,18 +78,6 @@ jobs:
           DB_URL: ${{ secrets.LAKEBASE_DATABASE_URL || secrets.DATABASE_URL }}
         run: |
           (cd /tmp && printf '%s' "$DB_URL" | databricks secrets put-secret ${{ env.SECRET_SCOPE }} ${{ env.SECRET_KEY }})
-
-      - name: Set Databricks OAuth secrets for app
-        env:
-          OAUTH_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-          OAUTH_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
-        run: |
-          if [ -z "$OAUTH_ID" ] || [ -z "$OAUTH_SECRET" ]; then
-            echo "::error::Set GitHub repository secrets DATABRICKS_CLIENT_ID and DATABRICKS_CLIENT_SECRET (OAuth app for SQL + bank supervision). The bundle requires workspace secrets databricks-oauth-client-id and databricks-oauth-client-secret in scope ${{ env.SECRET_SCOPE }}."
-            exit 1
-          fi
-          (cd /tmp && printf '%s' "$OAUTH_ID" | databricks secrets put-secret ${{ env.SECRET_SCOPE }} databricks-oauth-client-id)
-          (cd /tmp && printf '%s' "$OAUTH_SECRET" | databricks secrets put-secret ${{ env.SECRET_SCOPE }} databricks-oauth-client-secret)
 
       - name: Validate bundle
         run: |

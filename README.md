@@ -66,7 +66,7 @@ The bundle’s app resource references the secret via `resources[].secret` (scop
 | Purpose | Secrets / variables |
 |--------|---------------------|
 | **Workspace** (CLI, bundle deploy) | `DATABRICKS_HOST`, `DATABRICKS_TOKEN` |
-| **OAuth** (app: SQL warehouse + bank supervision invocations) | `DATABRICKS_CLIENT_ID`, `DATABRICKS_CLIENT_SECRET`. Workflows copy these into workspace scope `bank-audit-app` as `databricks-oauth-client-id` and `databricks-oauth-client-secret` before bundle deploy. For local `bundle deploy`, create those keys first (see Troubleshooting). |
+| **OAuth** (app runtime: SQL warehouse + bank supervision) | `DATABRICKS_CLIENT_ID`, `DATABRICKS_CLIENT_SECRET` are **not** set from GitHub. On Databricks Apps they are expected to come from the **platform/app environment** (service principal). For **local** `npm run dev`, set them in `.env` (see [.env.example](.env.example)). |
 | **Lakebase DB** (migrations + app runtime) | `LAKEBASE_DATABASE_URL` or `DATABASE_URL` |
 | **Bundle** | **Variable** `DATABRICKS_WORKSPACE_USER` — workspace user segment for bundle `root_path` (e.g. `12345@databricks` or your workspace user). The token must have write access to that path. |
 
@@ -95,16 +95,9 @@ From a feature branch you can open a PR and watch the **Deploy Preview** workflo
 
 ## Troubleshooting
 
-### Bundle: Invalid secret resource `databricks_oauth_client_id` / secret key does not exist
+### OAuth / SQL / supervision errors at runtime
 
-The app bundle references workspace secrets `bank-audit-app` / `databricks-oauth-client-id` and `databricks-oauth-client-secret`. They must exist **before** `databricks bundle deploy`.
-
-- **CI**: Add GitHub secrets `DATABRICKS_CLIENT_ID` and `DATABRICKS_CLIENT_SECRET`; the Deploy Preview / Deploy Production workflows write them to the workspace automatically.
-- **Local CLI**: After `databricks secrets create-scope bank-audit-app` (if needed), run:
-  ```bash
-  printf '%s' "$DATABRICKS_CLIENT_ID" | databricks secrets put-secret bank-audit-app databricks-oauth-client-id
-  printf '%s' "$DATABRICKS_CLIENT_SECRET" | databricks secrets put-secret bank-audit-app databricks-oauth-client-secret
-  ```
+If statement queries or bank supervision fail with OAuth or 401 errors, ensure the deployed app process has **`DATABRICKS_CLIENT_ID`** and **`DATABRICKS_CLIENT_SECRET`** (and **`DATABRICKS_HOST`**) in its environment. The asset bundle sets host and serving endpoint name; OAuth credentials are supplied by how you configure the Databricks App / compute, not via GitHub Actions secrets.
 
 ### P1010: User was denied access on the database `(not available)`
 
