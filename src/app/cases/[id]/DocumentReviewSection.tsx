@@ -375,15 +375,15 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
   }, [caseId, doc?.filePath, rasterObjectUrl]);
 
   return (
-    <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
-      <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">
+    <section className="rounded-lg border border-card-border bg-card-bg p-6 shadow-sm">
+      <h2 className="text-sm font-semibold text-muted uppercase tracking-wider mb-4">
         Document review
       </h2>
 
       {!hasBankName && (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="text-sm text-muted">
           This case has no bank name. Add a bank name that matches (case-insensitive){" "}
-          <code className="text-xs bg-zinc-100 dark:bg-zinc-800 px-1 rounded">
+          <code className="text-xs bg-section-bg px-1 rounded">
             main.tsfrt.bank_statement_analysis.bank_name
           </code>{" "}
           to load statement files.
@@ -391,22 +391,22 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
       )}
 
       {hasBankName && (
-        <div className="mb-4 rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 px-3 py-2 text-sm">
-          <p className="text-zinc-600 dark:text-zinc-300">
-            <span className="font-medium text-zinc-800 dark:text-zinc-200">
+        <div className="mb-4 rounded-md border border-card-border bg-section-bg px-3 py-2 text-sm">
+          <p className="text-foreground">
+            <span className="font-medium">
               Case bank name:
             </span>{" "}
             {bankName?.trim()}
           </p>
-          <p className="text-zinc-600 dark:text-zinc-300 mt-1">
-            <span className="font-medium text-zinc-800 dark:text-zinc-200">
+          <p className="text-foreground mt-1">
+            <span className="font-medium">
               Case bank ID:
             </span>{" "}
             <code className="text-xs">{bankId}</code>
           </p>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+          <p className="text-xs text-muted mt-2">
             Warehouse rows are matched with{" "}
-            <code className="text-[11px] bg-zinc-100 dark:bg-zinc-800 px-1 rounded">
+            <code className="text-[11px] bg-card-bg px-1 rounded border border-card-border">
               LOWER(TRIM(bank_name))
             </code>{" "}
             (case-insensitive).
@@ -415,15 +415,15 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
       )}
 
       {hasBankName && loading && (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
+        <p className="text-sm text-muted">Loading…</p>
       )}
 
       {hasBankName && !loading && loadError && (
-        <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
+        <p className="text-sm text-error">{loadError}</p>
       )}
 
       {hasBankName && !loading && !loadError && documents.length === 0 && (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="text-sm text-muted">
           No bank statement files found in the warehouse for this bank name (case-insensitive match).
         </p>
       )}
@@ -432,10 +432,10 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="lg:w-1/2 space-y-3 min-w-0">
             {documents.length > 1 && (
-              <label className="block text-xs text-zinc-500 dark:text-zinc-400">
+              <label className="block text-xs text-muted">
                 Statement file
                 <select
-                  className="mt-1 block w-full rounded-md border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-950 px-2 py-1.5 text-sm"
+                  className="mt-1 block w-full rounded-md border-2 border-card-border bg-card-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
                   value={docIndex}
                   onChange={(e) => {
                     setDocIndex(Number(e.target.value));
@@ -458,7 +458,7 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
 
             <div
               ref={previewFullscreenRef}
-              className="group/preview relative flex max-h-[70vh] min-h-[160px] flex-col overflow-hidden rounded-md border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-950 [&:fullscreen]:fixed [&:fullscreen]:inset-0 [&:fullscreen]:z-[100] [&:fullscreen]:max-h-none [&:fullscreen]:min-h-0 [&:fullscreen]:h-screen [&:fullscreen]:w-screen [&:fullscreen]:rounded-none [&:fullscreen]:border-0 [&:fullscreen]:bg-zinc-950 [&:fullscreen_.document-review-img]:max-h-[min(calc(100dvh-5rem),100%)] [&:fullscreen_.document-review-img]:w-auto [&:fullscreen_.document-review-img]:object-contain"
+              className="group/preview relative flex max-h-[70vh] min-h-[160px] flex-col overflow-hidden rounded-md border border-card-border bg-section-bg [&:fullscreen]:fixed [&:fullscreen]:inset-0 [&:fullscreen]:z-[100] [&:fullscreen]:max-h-none [&:fullscreen]:min-h-0 [&:fullscreen]:h-screen [&:fullscreen]:w-screen [&:fullscreen]:rounded-none [&:fullscreen]:border-0 [&:fullscreen]:bg-gray-900 [&:fullscreen_.document-review-img]:max-h-[min(calc(100dvh-5rem),100%)] [&:fullscreen_.document-review-img]:w-auto [&:fullscreen_.document-review-img]:object-contain"
             >
               {fileUrl && (
                 <div className="pointer-events-none absolute right-2 top-2 z-20 flex flex-wrap justify-end gap-2">
@@ -470,7 +470,7 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
                         : "View document full screen"
                     }
                     onClick={() => void toggleDocFullscreen()}
-                    className="pointer-events-auto rounded-md border border-zinc-300 bg-white/95 px-2.5 py-1 text-xs font-medium text-zinc-800 shadow-sm backdrop-blur-sm hover:bg-white dark:border-zinc-600 dark:bg-zinc-900/95 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                    className="pointer-events-auto rounded-md border border-card-border bg-card-bg/95 px-2.5 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm hover:bg-card-bg"
                   >
                     {isDocFullscreen ? "Exit full screen" : "Full screen"}
                   </button>
@@ -480,18 +480,18 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
               {fileUrl && isRasterImagePath(doc.filePath) && (
                 <div className="relative inline-block max-w-full">
                   {rasterFetchLoading && (
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 py-8 text-center">
+                    <p className="text-sm text-muted py-8 text-center">
                       Loading image…
                     </p>
                   )}
                   {rasterFetchError && !rasterFetchLoading && (
                     <div
-                      className="rounded-md border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-800 dark:text-red-200 whitespace-pre-wrap break-words"
+                      className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-error whitespace-pre-wrap break-words"
                       role="alert"
                     >
                       <p className="font-medium">Could not load image</p>
                       <p className="mt-1 text-xs opacity-90">{rasterFetchError}</p>
-                      <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
+                      <p className="mt-2 text-xs text-muted">
                         Open DevTools → Console for lines tagged{" "}
                         <code className="text-[11px]">[document-review]</code>.
                         Server logs use{" "}
@@ -543,8 +543,8 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
                             title={pe.contentSnippet}
                             className={`absolute z-10 box-border border-2 pointer-events-auto cursor-pointer transition-colors ${
                               active
-                                ? "border-sky-500 bg-sky-500/25"
-                                : "border-amber-500/80 bg-amber-400/15 hover:bg-amber-400/25"
+                                ? "border-accent bg-accent/20"
+                                : "border-warning/80 bg-warning/10 hover:bg-warning/20"
                             }`}
                             style={{
                               left: `${leftPct}%`,
@@ -561,14 +561,14 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
 
               {fileUrl && isPdfPath(doc.filePath) && (
                 <div className="p-4 text-center text-sm">
-                  <p className="text-zinc-600 dark:text-zinc-300 mb-2">
+                  <p className="text-foreground mb-2">
                     PDF preview is not embedded in this version.
                   </p>
                   <a
                     href={fileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sky-600 dark:text-sky-400 underline"
+                    className="text-accent hover:text-accent-hover underline"
                   >
                     Open PDF in new tab
                   </a>
@@ -583,7 +583,7 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
                       href={fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sky-600 dark:text-sky-400 underline"
+                      className="text-accent hover:text-accent-hover underline"
                     >
                       Download file
                     </a>
@@ -592,7 +592,7 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
               </div>
             </div>
             {doc.fileSize != null && (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              <p className="text-xs text-muted">
                 Size: {doc.fileSize} bytes
               </p>
             )}
@@ -601,15 +601,15 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
           <div className="lg:w-1/2 min-w-0 space-y-4">
             {doc.bankName && (
               <div>
-                <h3 className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
+                <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
                   Warehouse bank name
                 </h3>
-                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                <p className="text-sm font-medium text-foreground">
                   {doc.bankName}
                 </p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                <p className="text-xs text-muted mt-1">
                   Value from{" "}
-                  <code className="text-[11px] bg-zinc-100 dark:bg-zinc-800 px-1 rounded">
+                  <code className="text-[11px] bg-section-bg px-1 rounded border border-card-border">
                     bank_statement_analysis.bank_name
                   </code>{" "}
                   for this file.
@@ -619,32 +619,32 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
 
             {doc.details && (
               <div>
-                <h3 className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
+                <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
                   Extracted details
                 </h3>
                 <dl className="grid grid-cols-1 gap-2 text-sm">
                   {doc.details.bank_name != null && (
                     <>
-                      <dt className="text-zinc-500 dark:text-zinc-400">
+                      <dt className="text-muted">
                         Bank (details struct)
                       </dt>
-                      <dd>{doc.details.bank_name || "—"}</dd>
+                      <dd className="text-foreground">{doc.details.bank_name || "—"}</dd>
                     </>
                   )}
                   {doc.details.customer_name != null && (
                     <>
-                      <dt className="text-zinc-500 dark:text-zinc-400">
+                      <dt className="text-muted">
                         Customer
                       </dt>
-                      <dd>{doc.details.customer_name || "—"}</dd>
+                      <dd className="text-foreground">{doc.details.customer_name || "—"}</dd>
                     </>
                   )}
                   {doc.details.total_balance != null && (
                     <>
-                      <dt className="text-zinc-500 dark:text-zinc-400">
+                      <dt className="text-muted">
                         Total balance
                       </dt>
-                      <dd>{doc.details.total_balance || "—"}</dd>
+                      <dd className="text-foreground">{doc.details.total_balance || "—"}</dd>
                     </>
                   )}
                 </dl>
@@ -653,10 +653,10 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
 
             {doc.summary && (
               <div>
-                <h3 className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
+                <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
                   Summary
                 </h3>
-                <p className="text-sm whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">
+                <p className="text-sm whitespace-pre-wrap text-foreground">
                   {doc.summary}
                 </p>
               </div>
@@ -664,10 +664,10 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
 
             {doc.parsedElements.length > 0 && (
               <div>
-                <h3 className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
+                <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
                   Parsed elements
                 </h3>
-                <ul className="space-y-2 max-h-64 overflow-y-auto text-sm border border-zinc-200 dark:border-zinc-700 rounded-md p-2">
+                <ul className="space-y-2 max-h-64 overflow-y-auto text-sm border border-card-border rounded-md p-2">
                   {doc.parsedElements.map((pe) => (
                     <li key={pe.id}>
                       <button
@@ -675,19 +675,19 @@ export function DocumentReviewSection({ caseId, bankName, bankId }: Props) {
                         onClick={() => setSelectedElId(pe.id)}
                         className={`w-full text-left rounded px-2 py-1.5 transition-colors ${
                           selectedElId === pe.id
-                            ? "bg-sky-100 dark:bg-sky-900/40"
-                            : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                            ? "bg-blue-100 ring-1 ring-accent/30"
+                            : "hover:bg-section-bg"
                         }`}
                       >
-                        <span className="text-xs font-mono text-zinc-500">
+                        <span className="text-xs font-mono text-muted">
                           #{pe.sourceId}
                           {pe.type ? ` · ${pe.type}` : ""}
                         </span>
-                        <div className="text-zinc-800 dark:text-zinc-200 line-clamp-3">
+                        <div className="text-foreground line-clamp-3">
                           {pe.contentSnippet}
                         </div>
                         {pe.description && (
-                          <div className="text-xs text-zinc-500 mt-0.5 line-clamp-2">
+                          <div className="text-xs text-muted mt-0.5 line-clamp-2">
                             {pe.description}
                           </div>
                         )}

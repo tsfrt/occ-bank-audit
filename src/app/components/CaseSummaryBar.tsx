@@ -40,11 +40,11 @@ function MetricCard({
 }) {
   const accentStyles = {
     default:
-      "border-zinc-200/80 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/80 shadow-sm",
+      "border-card-border bg-card-bg shadow-sm",
     muted:
-      "border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50",
+      "border-card-border/60 bg-section-bg",
     emphasis:
-      "border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/30 shadow-sm",
+      "border-accent/30 bg-blue-50 shadow-sm ring-1 ring-accent/10",
   };
   return (
     <div
@@ -52,14 +52,14 @@ function MetricCard({
         "rounded-xl border px-4 py-3 min-w-0 transition-colors " + (accentStyles[accent ?? "default"])
       }
     >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400 truncate">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted truncate">
         {label}
       </p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+      <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
         {value}
       </p>
       {sublabel && (
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="mt-1 text-xs text-muted">
           {sublabel}
         </p>
       )}
@@ -96,12 +96,12 @@ export function CaseSummaryBar() {
 
   if (loading) {
     return (
-      <div className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/80 dark:bg-zinc-800/50 px-4 py-4">
+      <div className="border-b border-card-border bg-card-bg px-4 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+          <span className="text-sm font-semibold text-foreground">
             Workload analytics
           </span>
-          <span className="text-sm text-zinc-500 dark:text-zinc-400">
+          <span className="text-sm text-muted">
             Loading…
           </span>
           <UserAvatar />
@@ -112,9 +112,9 @@ export function CaseSummaryBar() {
 
   if (!summary || summary.error) {
     return (
-      <div className="border-b border-zinc-200 dark:border-zinc-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-4">
+      <div className="border-b border-card-border bg-amber-50 px-4 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-white dark:bg-zinc-900 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+          <div className="rounded-lg border border-amber-300 bg-card-bg px-4 py-3 text-sm text-amber-800">
             Summary unavailable. {summary?.error ?? "Could not load data."}
           </div>
           <UserAvatar />
@@ -128,31 +128,31 @@ export function CaseSummaryBar() {
     analytics.avgRiskScore != null || analytics.avgAiConfidencePercent != null;
 
   return (
-    <div className="border-b border-zinc-200 dark:border-zinc-800 bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-900/95 px-4 py-2 shadow-sm">
+    <div className="border-b border-card-border bg-card-bg px-4 py-2 shadow-sm">
       <div className="max-w-7xl mx-auto flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1 space-y-4">
           <button
             type="button"
             onClick={toggleCollapsed}
-            className="flex w-full items-center justify-between gap-2 rounded-lg py-2 text-left hover:bg-zinc-100/80 dark:hover:bg-zinc-800/50 -mx-2 px-2 transition-colors"
+            className="flex w-full items-center justify-between gap-2 rounded-lg py-2 text-left hover:bg-section-bg -mx-2 px-2 transition-colors"
             aria-expanded={!collapsed}
           >
-            <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+            <h2 className="text-sm font-semibold text-foreground">
               <Link
                 href="/dashboard"
                 onClick={(e) => e.stopPropagation()}
-                className="hover:text-zinc-900 dark:hover:text-zinc-100 hover:underline"
+                className="hover:text-accent hover:underline"
               >
                 Workload analytics
               </Link>
               {collapsed && (
-                <span className="ml-2 font-normal text-zinc-500 dark:text-zinc-400">
+                <span className="ml-2 font-normal text-muted">
                   · {total} cases
                 </span>
               )}
             </h2>
             <span
-              className="shrink-0 text-zinc-500 dark:text-zinc-400 transition-transform"
+              className="shrink-0 text-muted transition-transform"
               style={{ transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
               aria-hidden
             >

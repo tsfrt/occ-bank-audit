@@ -54,12 +54,12 @@ export function ReassignAuditor({ caseId, currentAuditorId }: Props) {
 
   return (
     <div className="space-y-2">
-      <dt className="text-xs text-zinc-500 dark:text-zinc-400">Reassign auditor</dt>
+      <dt className="text-xs text-muted">Reassign auditor</dt>
       <dd className="mt-0.5 flex flex-wrap items-center gap-2">
         <select
           value={selectedId}
           onChange={(e) => setSelectedId(e.target.value)}
-          className="rounded-md border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100"
+          className="rounded-md border-2 border-card-border bg-card-bg px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors"
         >
           {auditors.map((a) => (
             <option key={a.id} value={a.id}>
@@ -71,12 +71,12 @@ export function ReassignAuditor({ caseId, currentAuditorId }: Props) {
           type="button"
           onClick={handleReassign}
           disabled={!hasChanged || saving}
-          className="rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-3 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:pointer-events-none"
+          className="rounded-md bg-primary text-white px-4 py-2 text-sm font-medium hover:bg-primary-hover disabled:opacity-50 disabled:pointer-events-none transition-colors shadow-sm"
         >
           {saving ? "Saving…" : "Reassign"}
         </button>
         {error && (
-          <span className="text-sm text-red-600 dark:text-red-400">{error}</span>
+          <span className="text-sm text-error">{error}</span>
         )}
       </dd>
     </div>

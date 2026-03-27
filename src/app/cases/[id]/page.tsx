@@ -13,6 +13,13 @@ const statusLabels: Record<string, string> = {
   manual_review: "Manual review",
 };
 
+const statusColors: Record<string, string> = {
+  pending_analysis: "bg-yellow-100 text-yellow-800 border border-yellow-200",
+  pending_review: "bg-blue-100 text-blue-800 border border-blue-200",
+  reviewed: "bg-green-100 text-green-800 border border-green-200",
+  manual_review: "bg-orange-100 text-orange-800 border border-orange-200",
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function CaseDetailPage({
@@ -37,34 +44,34 @@ export default async function CaseDetailPage({
 
   return (
     <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
-      <div className="border-b border-zinc-200 dark:border-zinc-800 pb-4">
+      <div className="border-b border-card-border pb-4">
         <Link
           href="/dashboard"
-          className="text-sm text-zinc-500 dark:text-zinc-400 hover:underline"
+          className="text-sm text-accent hover:text-accent-hover hover:underline"
         >
           ← Back to cases
         </Link>
-        <h1 className="text-xl font-semibold mt-2">
+        <h1 className="text-xl font-semibold mt-2 text-foreground">
           {auditCase.bankName || auditCase.bankId}
         </h1>
         {auditCase.reference && (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+          <p className="text-sm text-muted mt-1">
             {auditCase.reference}
           </p>
         )}
       </div>
-        <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
-          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">
+        <section className="rounded-lg border border-card-border bg-card-bg p-6 shadow-sm">
+          <h2 className="text-sm font-semibold text-muted uppercase tracking-wider mb-4">
             Case details
           </h2>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <dt className="text-xs text-zinc-500 dark:text-zinc-400">Assigned auditor</dt>
-              <dd className="mt-0.5 font-medium">
+              <dt className="text-xs text-muted">Assigned auditor</dt>
+              <dd className="mt-0.5 font-medium text-foreground">
                 {auditCase.auditor ? (
                   <span>{auditCase.auditor.name} ({auditCase.auditor.email})</span>
                 ) : (
-                  <span className="text-zinc-400">—</span>
+                  <span className="text-muted-light">—</span>
                 )}
               </dd>
             </div>
@@ -72,50 +79,50 @@ export default async function CaseDetailPage({
               <ReassignAuditor caseId={auditCase.id} currentAuditorId={auditCase.auditor?.id ?? ""} />
             </div>
             <div>
-              <dt className="text-xs text-zinc-500 dark:text-zinc-400">Status</dt>
+              <dt className="text-xs text-muted">Status</dt>
               <dd className="mt-0.5">
-                <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-700">
+                <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[auditCase.status] ?? "bg-gray-100 text-gray-700 border border-gray-200"}`}>
                   {statusLabels[auditCase.status] ?? auditCase.status}
                 </span>
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-zinc-500 dark:text-zinc-400">Audit type</dt>
-              <dd className="mt-0.5 font-medium">
+              <dt className="text-xs text-muted">Audit type</dt>
+              <dd className="mt-0.5 font-medium text-foreground">
                 {auditCase.auditType
                   ? AUDIT_TYPE_LABELS[auditCase.auditType]
-                  : <span className="text-zinc-400">—</span>}
+                  : <span className="text-muted-light">—</span>}
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+              <dt className="text-xs text-muted">
                 Risk score
               </dt>
-              <dd className="mt-0.5 font-medium">
+              <dd className="mt-0.5 font-medium text-foreground">
                 {auditCase.riskScore != null ? (
                   Number(auditCase.riskScore).toFixed(2)
                 ) : (
-                  <span className="text-zinc-400">—</span>
+                  <span className="text-muted-light">—</span>
                 )}
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+              <dt className="text-xs text-muted">
                 AI confidence
               </dt>
-              <dd className="mt-0.5 font-medium">
+              <dd className="mt-0.5 font-medium text-foreground">
                 {auditCase.aiConfidence != null ? (
                   `${(Number(auditCase.aiConfidence) * 100).toFixed(0)}%`
                 ) : (
-                  <span className="text-zinc-400">—</span>
+                  <span className="text-muted-light">—</span>
                 )}
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+              <dt className="text-xs text-muted">
                 Last analysis
               </dt>
-              <dd className="mt-0.5 text-sm">
+              <dd className="mt-0.5 text-sm text-foreground">
                 {latestAnalysis
                   ? new Date(latestAnalysis.completedAt).toLocaleString()
                   : "—"}
@@ -137,21 +144,21 @@ export default async function CaseDetailPage({
         />
 
         {auditCase.reviews.length > 0 && (
-          <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
-            <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">
+          <section className="rounded-lg border border-card-border bg-card-bg p-6 shadow-sm">
+            <h2 className="text-sm font-semibold text-muted uppercase tracking-wider mb-4">
               Review history
             </h2>
             <ul className="space-y-2">
               {auditCase.reviews.map((r) => (
                 <li
                   key={r.id}
-                  className="flex justify-between text-sm py-2 border-b border-zinc-100 dark:border-zinc-800 last:border-0"
+                  className="flex justify-between text-sm py-2 border-b border-card-border last:border-0"
                 >
-                  <span>
+                  <span className="text-foreground">
                     {r.action === "reviewed" ? "Marked reviewed" : "Manual review required"}
                     {r.reviewedBy && ` by ${r.reviewedBy}`}
                   </span>
-                  <span className="text-zinc-500 dark:text-zinc-400">
+                  <span className="text-muted">
                     {new Date(r.createdAt).toLocaleString()}
                   </span>
                 </li>

@@ -59,23 +59,23 @@ export default function NewCasePage() {
       <div className="mb-6">
         <Link
           href="/dashboard"
-          className="text-sm text-zinc-500 dark:text-zinc-400 hover:underline"
+          className="text-sm text-accent hover:text-accent-hover hover:underline"
         >
           ← Back to cases
         </Link>
-        <h1 className="text-xl font-semibold mt-2">New audit case</h1>
+        <h1 className="text-xl font-semibold mt-2 text-foreground">New audit case</h1>
       </div>
         <form
           onSubmit={handleSubmit}
-          className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 space-y-4"
+          className="rounded-lg border border-card-border bg-card-bg p-6 space-y-4 shadow-sm"
         >
           {error && (
-            <div className="rounded-md bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 px-4 py-2 text-sm">
+            <div className="rounded-md bg-red-50 border border-red-200 text-error px-4 py-2 text-sm">
               {error}
             </div>
           )}
           <div>
-            <label htmlFor="bankId" className="block text-sm font-medium mb-1">
+            <label htmlFor="bankId" className="block text-sm font-medium text-foreground mb-1">
               Bank ID *
             </label>
             <input
@@ -84,11 +84,11 @@ export default function NewCasePage() {
               required
               value={bankId}
               onChange={(e) => setBankId(e.target.value)}
-              className="w-full rounded-md border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100"
+              className="w-full rounded-md border-2 border-card-border bg-card-bg px-3 py-2.5 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors"
             />
           </div>
           <div>
-            <label htmlFor="bankName" className="block text-sm font-medium mb-1">
+            <label htmlFor="bankName" className="block text-sm font-medium text-foreground mb-1">
               Bank name
             </label>
             <input
@@ -96,11 +96,11 @@ export default function NewCasePage() {
               type="text"
               value={bankName}
               onChange={(e) => setBankName(e.target.value)}
-              className="w-full rounded-md border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100"
+              className="w-full rounded-md border-2 border-card-border bg-card-bg px-3 py-2.5 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors"
             />
           </div>
           <div>
-            <label htmlFor="reference" className="block text-sm font-medium mb-1">
+            <label htmlFor="reference" className="block text-sm font-medium text-foreground mb-1">
               Reference
             </label>
             <input
@@ -108,11 +108,11 @@ export default function NewCasePage() {
               type="text"
               value={reference}
               onChange={(e) => setReference(e.target.value)}
-              className="w-full rounded-md border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100"
+              className="w-full rounded-md border-2 border-card-border bg-card-bg px-3 py-2.5 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors"
             />
           </div>
           <div>
-            <label htmlFor="auditType" className="block text-sm font-medium mb-1">
+            <label htmlFor="auditType" className="block text-sm font-medium text-foreground mb-1">
               Audit type *
             </label>
             <select
@@ -120,7 +120,7 @@ export default function NewCasePage() {
               required
               value={auditType}
               onChange={(e) => setAuditType((e.target.value || "") as AuditType | "")}
-              className="w-full rounded-md border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100"
+              className="w-full rounded-md border-2 border-card-border bg-card-bg px-3 py-2.5 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors"
             >
               <option value="">Select audit type…</option>
               {AUDIT_TYPES.map((t) => (
@@ -131,7 +131,7 @@ export default function NewCasePage() {
             </select>
           </div>
           <div>
-            <label htmlFor="auditor" className="block text-sm font-medium mb-1">
+            <label htmlFor="auditor" className="block text-sm font-medium text-foreground mb-1">
               Auditor *
             </label>
             <select
@@ -139,7 +139,7 @@ export default function NewCasePage() {
               required
               value={auditorId}
               onChange={(e) => setAuditorId(e.target.value)}
-              className="w-full rounded-md border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100"
+              className="w-full rounded-md border-2 border-card-border bg-card-bg px-3 py-2.5 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors"
             >
               <option value="">Select auditor…</option>
               {auditors.map((a) => (
@@ -153,13 +153,13 @@ export default function NewCasePage() {
             <button
               type="submit"
               disabled={loading}
-              className="rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50"
+              className="rounded-md bg-primary text-white px-5 py-2.5 text-sm font-medium hover:bg-primary-hover disabled:opacity-50 transition-colors shadow-sm"
             >
               {loading ? "Creating…" : "Create case"}
             </button>
             <Link
               href="/dashboard"
-              className="rounded-md border border-zinc-300 dark:border-zinc-600 px-4 py-2 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              className="rounded-md border-2 border-card-border px-5 py-2.5 text-sm font-medium text-muted hover:bg-section-bg transition-colors"
             >
               Cancel
             </Link>
