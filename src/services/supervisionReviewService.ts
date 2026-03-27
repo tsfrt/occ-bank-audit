@@ -35,7 +35,14 @@ type ServingResponse = {
   [key: string]: unknown;
 };
 
+type OutputContentPart = { type?: string; text?: string };
+type OutputMessage = {
+  role?: string;
+  content?: string | OutputContentPart[];
+};
+
 function extractAssistantText(data: ServingResponse): string | null {
+  // OpenAI Chat Completions shape: choices[].message.content
   const choices = data.choices;
   if (Array.isArray(choices) && choices.length > 0) {
     const first = choices[0];
@@ -43,19 +50,40 @@ function extractAssistantText(data: ServingResponse): string | null {
     if (typeof content === "string" && content.trim()) return content;
   }
 
-  // KA-style responses may mirror `input` with `output` (array of chat turns)
+  // Responses API / Agent Bricks shape:
+  //   output: [{ type: "message", role: "assistant", content: [{ type: "output_text", text: "..." }] }]
   const output = (data as { output?: unknown }).output;
-  if (typeof output === "string" && output.trim()) return output;
-  if (Array.isArray(output) && output.length > 0) {
-    const last = output[output.length - 1];
-    if (last && typeof last === "object" && last !== null) {
-      const o = last as { content?: string; message?: { content?: string } };
-      const c = o.content ?? o.message?.content;
-      if (typeof c === "string" && c.trim()) return c;
+  if (Array.isArray(output)) {
+    for (let i = output.length - 1; i >= 0; i--) {
+      const msg = output[i] as OutputMessage | undefined;
+      if (!msg || typeof msg !== "object") continue;
+
+      // content is an array of parts (e.g. output_text)
+      if (Array.isArray(msg.content)) {
+        const texts = msg.content
+          .filter(
+            (p: OutputContentPart) =>
+              typeof p.text === "string" && p.text.trim()
+          )
+          .map((p: OutputContentPart) => p.text!);
+        if (texts.length > 0) return texts.join("\n\n");
+      }
+
+      // content is a plain string
+      if (typeof msg.content === "string" && msg.content.trim()) {
+        return msg.content;
+      }
     }
   }
+  if (typeof output === "string" && output.trim()) return output;
 
-  const raw = data as { text?: string };
+  // Top-level text field
+  const raw = data as { text?: unknown };
+  if (raw.text && typeof raw.text === "object") {
+    const textObj = raw.text as { value?: string };
+    if (typeof textObj.value === "string" && textObj.value.trim())
+      return textObj.value;
+  }
   if (typeof raw.text === "string" && raw.text.trim()) return raw.text;
 
   return null;
