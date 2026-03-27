@@ -139,13 +139,12 @@ jobs:
           OAUTH_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
           OAUTH_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
         run: |
-          if [ -n "$OAUTH_ID" ]; then
-            printf '%s' "$OAUTH_ID" | databricks secrets put-secret ${{ env.SECRET_SCOPE }} databricks-oauth-client-id
+          if [ -z "$OAUTH_ID" ] || [ -z "$OAUTH_SECRET" ]; then
+            echo "::error::Set GitHub repository secrets DATABRICKS_CLIENT_ID and DATABRICKS_CLIENT_SECRET (OAuth app for SQL + bank supervision). The bundle requires workspace secrets databricks-oauth-client-id and databricks-oauth-client-secret in scope ${{ env.SECRET_SCOPE }}."
+            exit 1
           fi
-          if [ -n "$OAUTH_SECRET" ]; then
-            printf '%s' "$OAUTH_SECRET" | databricks secrets put-secret ${{ env.SECRET_SCOPE }} databricks-oauth-client-secret
-          fi
-        continue-on-error: true
+          printf '%s' "$OAUTH_ID" | databricks secrets put-secret ${{ env.SECRET_SCOPE }} databricks-oauth-client-id
+          printf '%s' "$OAUTH_SECRET" | databricks secrets put-secret ${{ env.SECRET_SCOPE }} databricks-oauth-client-secret
 
       - name: Validate bundle
         run: |

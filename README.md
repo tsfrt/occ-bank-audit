@@ -66,6 +66,7 @@ The bundle’s app resource references the secret via `resources[].secret` (scop
 | Purpose | Secrets / variables |
 |--------|---------------------|
 | **Workspace** (CLI, bundle deploy) | `DATABRICKS_HOST`, `DATABRICKS_TOKEN` |
+| **OAuth** (app: SQL warehouse + bank supervision invocations) | `DATABRICKS_CLIENT_ID`, `DATABRICKS_CLIENT_SECRET`. Workflows copy these into workspace scope `bank-audit-app` as `databricks-oauth-client-id` and `databricks-oauth-client-secret` before bundle deploy. For local `bundle deploy`, create those keys first (see Troubleshooting). |
 | **Lakebase DB** (migrations + app runtime) | `LAKEBASE_DATABASE_URL` or `DATABASE_URL` |
 | **Bundle** | **Variable** `DATABRICKS_WORKSPACE_USER` — workspace user segment for bundle `root_path` (e.g. `12345@databricks` or your workspace user). The token must have write access to that path. |
 
@@ -93,6 +94,17 @@ From a feature branch you can open a PR and watch the **Deploy Preview** workflo
 3. **Inspect failures**: If the run fails, the script prints the failed logs. Fix the issue, push to the same branch; the workflow re-runs on push. You can also run `gh run list --workflow=deploy-preview.yml` and `gh run view <run-id> --log-failed` manually.
 
 ## Troubleshooting
+
+### Bundle: Invalid secret resource `databricks_oauth_client_id` / secret key does not exist
+
+The app bundle references workspace secrets `bank-audit-app` / `databricks-oauth-client-id` and `databricks-oauth-client-secret`. They must exist **before** `databricks bundle deploy`.
+
+- **CI**: Add GitHub secrets `DATABRICKS_CLIENT_ID` and `DATABRICKS_CLIENT_SECRET`; the Deploy Preview / Deploy Production workflows write them to the workspace automatically.
+- **Local CLI**: After `databricks secrets create-scope bank-audit-app` (if needed), run:
+  ```bash
+  printf '%s' "$DATABRICKS_CLIENT_ID" | databricks secrets put-secret bank-audit-app databricks-oauth-client-id
+  printf '%s' "$DATABRICKS_CLIENT_SECRET" | databricks secrets put-secret bank-audit-app databricks-oauth-client-secret
+  ```
 
 ### P1010: User was denied access on the database `(not available)`
 

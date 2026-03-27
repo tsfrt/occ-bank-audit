@@ -8,7 +8,14 @@ import {
   getDatabricksOAuthAccessToken,
 } from "@/lib/databricksWorkspace";
 
-const INVOCATIONS_PATH = "/api/2.0/serving-endpoints";
+/**
+ * Use workspace invocations URL (not /api/2.0/serving-endpoints/.../invocations).
+ * Matches serving UI / docs: POST https://<workspace>/serving-endpoints/<name>/invocations
+ */
+function servingInvocationsUrl(host: string, endpointName: string): string {
+  const base = host.replace(/\/$/, "");
+  return `${base}/serving-endpoints/${encodeURIComponent(endpointName)}/invocations`;
+}
 
 function getEndpointName(): string {
   const name =
@@ -58,7 +65,7 @@ export async function runBankSupervisionReview(
   const token = await getDatabricksOAuthAccessToken();
   const endpointName = getEndpointName();
 
-  const url = `${host.replace(/\/$/, "")}${INVOCATIONS_PATH}/${endpointName}/invocations`;
+  const url = servingInvocationsUrl(host, endpointName);
 
   const body = {
     messages: [{ role: "user" as const, content: userMessageContent }],
