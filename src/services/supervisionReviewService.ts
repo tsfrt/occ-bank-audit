@@ -115,8 +115,10 @@ export async function runBankSupervisionReview(
 
   const feedback = extractAssistantText(data);
   if (!feedback) {
+    const preview = JSON.stringify(data).slice(0, 800);
+    console.error("[supervision-review] unrecognised response shape:", preview);
     throw new Error(
-      "Supervision endpoint returned no assistant message; check endpoint contract"
+      `Supervision endpoint returned no assistant message. Response keys: [${Object.keys(data).join(", ")}]. Preview: ${preview}`
     );
   }
 
