@@ -83,16 +83,7 @@ resources:
             securable_type: VOLUME
             securable_full_name: ${var.bank_statements_volume_name}
             permission: READ_VOLUME
-        - name: databricks_oauth_client_id
-          secret:
-            scope: bank-audit-app
-            key: databricks-oauth-client-id
-            permission: READ
-        - name: databricks_oauth_client_secret
-          secret:
-            scope: bank-audit-app
-            key: databricks-oauth-client-secret
-            permission: READ
+  
 
 targets:
   prod:
