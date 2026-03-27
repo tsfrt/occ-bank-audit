@@ -66,6 +66,7 @@ The bundle’s app resource references the secret via `resources[].secret` (scop
 | Purpose | Secrets / variables |
 |--------|---------------------|
 | **Workspace** (CLI, bundle deploy) | `DATABRICKS_HOST`, `DATABRICKS_TOKEN` |
+| **OAuth** (app runtime: SQL warehouse + bank supervision) | `DATABRICKS_CLIENT_ID`, `DATABRICKS_CLIENT_SECRET` are **not** set from GitHub. On Databricks Apps they are expected to come from the **platform/app environment** (service principal). For **local** `npm run dev`, set them in `.env` (see [.env.example](.env.example)). |
 | **Lakebase DB** (migrations + app runtime) | `LAKEBASE_DATABASE_URL` or `DATABASE_URL` |
 | **Bundle** | **Variable** `DATABRICKS_WORKSPACE_USER` — workspace user segment for bundle `root_path` (e.g. `12345@databricks` or your workspace user). The token must have write access to that path. |
 
@@ -93,6 +94,10 @@ From a feature branch you can open a PR and watch the **Deploy Preview** workflo
 3. **Inspect failures**: If the run fails, the script prints the failed logs. Fix the issue, push to the same branch; the workflow re-runs on push. You can also run `gh run list --workflow=deploy-preview.yml` and `gh run view <run-id> --log-failed` manually.
 
 ## Troubleshooting
+
+### OAuth / SQL / supervision errors at runtime
+
+If statement queries or bank supervision fail with OAuth or 401 errors, ensure the deployed app process has **`DATABRICKS_CLIENT_ID`** and **`DATABRICKS_CLIENT_SECRET`** (and **`DATABRICKS_HOST`**) in its environment. The asset bundle sets host and serving endpoint name; OAuth credentials are supplied by how you configure the Databricks App / compute, not via GitHub Actions secrets.
 
 ### P1010: User was denied access on the database `(not available)`
 
