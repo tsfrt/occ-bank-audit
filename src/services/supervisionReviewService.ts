@@ -37,14 +37,25 @@ type ServingResponse = {
 
 function extractAssistantText(data: ServingResponse): string | null {
   const choices = data.choices;
-  if (!Array.isArray(choices) || choices.length === 0) return null;
-  const first = choices[0];
-  const content = first?.message?.content ?? first?.delta?.content;
-  if (typeof content === "string" && content.trim()) return content;
+  if (Array.isArray(choices) && choices.length > 0) {
+    const first = choices[0];
+    const content = first?.message?.content ?? first?.delta?.content;
+    if (typeof content === "string" && content.trim()) return content;
+  }
 
-  // Some endpoints nest output_text or return string predictions
-  const raw = data as { output?: string; text?: string };
-  if (typeof raw.output === "string" && raw.output.trim()) return raw.output;
+  // KA-style responses may mirror `input` with `output` (array of chat turns)
+  const output = (data as { output?: unknown }).output;
+  if (typeof output === "string" && output.trim()) return output;
+  if (Array.isArray(output) && output.length > 0) {
+    const last = output[output.length - 1];
+    if (last && typeof last === "object" && last !== null) {
+      const o = last as { content?: string; message?: { content?: string } };
+      const c = o.content ?? o.message?.content;
+      if (typeof c === "string" && c.trim()) return c;
+    }
+  }
+
+  const raw = data as { text?: string };
   if (typeof raw.text === "string" && raw.text.trim()) return raw.text;
 
   return null;
@@ -67,8 +78,9 @@ export async function runBankSupervisionReview(
 
   const url = servingInvocationsUrl(host, endpointName);
 
+  // KA / some Agent Bricks endpoints expect `input`, not OpenAI-style `messages`.
   const body = {
-    messages: [{ role: "user" as const, content: userMessageContent }],
+    input: [{ role: "user" as const, content: userMessageContent }],
   };
 
   const res = await fetch(url, {
