@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { AUDIT_TYPE_LABELS } from "@/lib/auditTypes";
 import { DocumentReviewSection } from "./DocumentReviewSection";
 import { MeetingMinutesSection } from "./MeetingMinutesSection";
+import { HandbookAuditSection } from "./HandbookAuditSection";
 import { ReassignAuditor } from "./ReassignAuditor";
 
 const statusLabels: Record<string, string> = {
@@ -142,6 +143,8 @@ export default async function CaseDetailPage({
           bankName={auditCase.bankName}
           bankId={auditCase.bankId}
         />
+
+        <HandbookAuditSection caseId={auditCase.id} />
 
         {auditCase.reviews.length > 0 && (
           <section className="rounded-lg border border-card-border bg-card-bg p-6 shadow-sm">
