@@ -71,12 +71,12 @@ export async function POST(
     const token = await getDatabricksOAuthAccessToken();
 
     const payload = {
-      dataframe_records: [
-        {
-          query: message.trim(),
-          domain: domainCode,
-        },
+      input: [
+        { role: "user", content: message.trim() },
       ],
+      custom_inputs: {
+        domain: domainCode,
+      },
     };
 
     const res = await fetch(AUDIT_AGENT_URL, {
