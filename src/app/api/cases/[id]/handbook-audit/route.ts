@@ -71,18 +71,12 @@ export async function POST(
     const token = await getDatabricksOAuthAccessToken();
 
     const payload = {
-      messages: [
+      dataframe_records: [
         {
-          role: "user",
-          content: message.trim(),
+          query: message.trim(),
+          domain: domainCode,
         },
       ],
-      custom_inputs: {
-        domain: domainCode,
-        bank_id: auditCase.bankId,
-        bank_name: auditCase.bankName ?? "",
-        case_id: caseId,
-      },
     };
 
     const res = await fetch(AUDIT_AGENT_URL, {
@@ -102,12 +96,24 @@ export async function POST(
     const data = await res.json();
 
     if (typeof data === "object" && data !== null) {
-      if (typeof data.content === "string") {
-        assistantContent = data.content;
-      } else if (Array.isArray(data.choices) && data.choices[0]?.message?.content) {
+      // ChatAgent / OpenAI-compatible response
+      if (Array.isArray(data.choices) && data.choices[0]?.message?.content) {
         assistantContent = data.choices[0].message.content;
+      } else if (typeof data.content === "string") {
+        assistantContent = data.content;
       } else if (typeof data.output === "string") {
         assistantContent = data.output;
+      // dataframe_records response: predictions array
+      } else if (Array.isArray(data.predictions)) {
+        const first = data.predictions[0];
+        if (typeof first === "string") {
+          assistantContent = first;
+        } else if (typeof first === "object" && first !== null) {
+          assistantContent =
+            first.content ?? first.output ?? first.text ?? JSON.stringify(first, null, 2);
+        } else {
+          assistantContent = JSON.stringify(data.predictions, null, 2);
+        }
       } else {
         assistantContent = JSON.stringify(data, null, 2);
       }
