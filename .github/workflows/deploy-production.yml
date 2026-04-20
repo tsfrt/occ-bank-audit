@@ -3,6 +3,7 @@
 # The bundle (databricks.yml) defines the app with secret resource and config (replaces app.yaml).
 #
 # Secrets: DATABRICKS_HOST, DATABRICKS_TOKEN, LAKEBASE_DATABASE_URL (or DATABASE_URL).
+# OAuth for the running app (DATABRICKS_CLIENT_ID / DATABRICKS_CLIENT_SECRET) is supplied by the Databricks Apps environment, not GitHub.
 # Secret scope "bank-audit-app", key "database-url-prod" is set by this workflow and referenced in the bundle.
 
 name: Deploy Production

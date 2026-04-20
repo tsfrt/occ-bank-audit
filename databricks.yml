@@ -9,6 +9,7 @@
 #   secret_key       — secret key in scope bank-audit-app (prod: database-url-prod; preview: database-url-<env>)
 #   sql_warehouse_id — resolved from warehouse named 00vsdb (see variables.sql_warehouse_id.lookup)
 #   bank_statements_volume_name — UC three-part volume name for statement files (default main.tsfrt.occ)
+#   bank_supervision_agent_endpoint — model serving endpoint name for on-demand bank supervision (KA)
 
 bundle:
   name: bank-audit-analyst-bundle
@@ -35,6 +36,9 @@ variables:
   bank_statements_volume_name:
     description: Unity Catalog volume for bank statement files (catalog.schema.volume)
     default: main.tsfrt.occ
+  bank_supervision_agent_endpoint:
+    description: Serving endpoint name for bank supervision document review (OAuth invocations)
+    default: ka-728916cd-endpoint
 
 resources:
   apps:
@@ -56,6 +60,10 @@ resources:
             value_from: sql_warehouse
           - name: BANK_STATEMENTS_VOLUME_BASE_PATH
             value_from: bank_statements_volume
+          - name: DATABRICKS_HOST
+            value: "${var.databricks_host}"
+          - name: BANK_SUPERVISION_AGENT_ENDPOINT
+            value: "${var.bank_supervision_agent_endpoint}"
       resources:
         - name: database_url
           secret:
@@ -71,6 +79,7 @@ resources:
             securable_type: VOLUME
             securable_full_name: ${var.bank_statements_volume_name}
             permission: READ_VOLUME
+  
 
 targets:
   prod:
