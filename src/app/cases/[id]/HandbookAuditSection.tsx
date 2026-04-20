@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Markdown from "react-markdown";
 
 const HANDBOOK_DOMAINS = [
   { value: "bsa_aml", label: "BSA/AML", code: "00" },
@@ -30,6 +29,74 @@ type ChatMessage = {
   domain: string;
   createdAt: string;
 };
+
+function renderMarkdown(md: string): React.ReactNode[] {
+  const lines = md.split("\n");
+  const nodes: React.ReactNode[] = [];
+  let listItems: React.ReactNode[] = [];
+  let olItems: React.ReactNode[] = [];
+  let key = 0;
+
+  const flushUl = () => {
+    if (listItems.length > 0) {
+      nodes.push(<ul key={key++} className="list-disc pl-5 my-1.5 space-y-0.5 text-sm">{listItems}</ul>);
+      listItems = [];
+    }
+  };
+  const flushOl = () => {
+    if (olItems.length > 0) {
+      nodes.push(<ol key={key++} className="list-decimal pl-5 my-1.5 space-y-0.5 text-sm">{olItems}</ol>);
+      olItems = [];
+    }
+  };
+
+  const inlineFormat = (text: string): React.ReactNode => {
+    const parts: React.ReactNode[] = [];
+    const re = /(\*\*\[.*?\].*?\*\*|\*\*.*?\*\*|`[^`]+`)/g;
+    let last = 0;
+    let m: RegExpExecArray | null;
+    let i = 0;
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) parts.push(text.slice(last, m.index));
+      const seg = m[0];
+      if (seg.startsWith("**") && seg.endsWith("**")) {
+        parts.push(<strong key={i++} className="font-semibold">{seg.slice(2, -2)}</strong>);
+      } else if (seg.startsWith("`") && seg.endsWith("`")) {
+        parts.push(<code key={i++} className="text-xs bg-section-bg px-1 py-0.5 rounded">{seg.slice(1, -1)}</code>);
+      } else {
+        parts.push(seg);
+      }
+      last = m.index + seg.length;
+    }
+    if (last < text.length) parts.push(text.slice(last));
+    return parts.length === 1 ? parts[0] : <>{parts}</>;
+  };
+
+  for (const raw of lines) {
+    const line = raw;
+
+    if (/^#{3}\s/.test(line)) {
+      flushUl(); flushOl();
+      nodes.push(<h3 key={key++} className="text-sm font-semibold text-foreground mt-3 mb-1">{inlineFormat(line.replace(/^#{3}\s+/, ""))}</h3>);
+    } else if (/^#{2}\s/.test(line)) {
+      flushUl(); flushOl();
+      nodes.push(<h2 key={key++} className="text-base font-semibold text-foreground mt-4 mb-1.5">{inlineFormat(line.replace(/^#{2}\s+/, ""))}</h2>);
+    } else if (/^[-*]\s/.test(line.trimStart())) {
+      flushOl();
+      listItems.push(<li key={key++}>{inlineFormat(line.replace(/^\s*[-*]\s+/, ""))}</li>);
+    } else if (/^\d+\.\s/.test(line.trimStart())) {
+      flushUl();
+      olItems.push(<li key={key++}>{inlineFormat(line.replace(/^\s*\d+\.\s+/, ""))}</li>);
+    } else if (line.trim() === "") {
+      flushUl(); flushOl();
+    } else {
+      flushUl(); flushOl();
+      nodes.push(<p key={key++} className="text-sm my-1.5">{inlineFormat(line)}</p>);
+    }
+  }
+  flushUl(); flushOl();
+  return nodes;
+}
 
 type Props = {
   caseId: string;
@@ -187,10 +254,8 @@ export function HandbookAuditSection({ caseId }: Props) {
                   </div>
                 </div>
               ) : (
-                <div className="max-w-[95%] rounded-lg px-4 py-3 text-sm bg-card-bg border border-card-border text-foreground">
-                  <div className="prose prose-sm max-w-none break-words prose-headings:text-foreground prose-headings:mt-3 prose-headings:mb-1.5 prose-h2:text-base prose-h3:text-sm prose-p:my-1.5 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0.5 prose-strong:text-foreground prose-code:text-accent prose-code:text-xs prose-code:bg-section-bg prose-code:px-1 prose-code:py-0.5 prose-code:rounded">
-                    <Markdown>{msg.content}</Markdown>
-                  </div>
+                <div className="max-w-[95%] rounded-lg px-4 py-3 bg-card-bg border border-card-border text-foreground">
+                  <div className="break-words">{renderMarkdown(msg.content)}</div>
                   <div className="text-[10px] mt-2 text-muted-light">
                     {new Date(msg.createdAt).toLocaleString()}
                   </div>
