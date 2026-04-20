@@ -7,6 +7,45 @@ import type { HandbookAuditDomain } from "@/generated/prisma";
 const AUDIT_AGENT_URL =
   "https://e2-demo-field-eng.cloud.databricks.com/serving-endpoints/occ-audit-agent/invocations";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function extractAgentText(data: any): string {
+  if (typeof data !== "object" || data === null) return String(data);
+
+  // Databricks Responses API: output[].content[].text
+  if (Array.isArray(data.output)) {
+    const texts: string[] = [];
+    for (const block of data.output) {
+      if (block?.type === "message" && Array.isArray(block.content)) {
+        for (const part of block.content) {
+          if (typeof part?.text === "string") texts.push(part.text);
+        }
+      }
+    }
+    if (texts.length > 0) return texts.join("\n\n");
+  }
+
+  // OpenAI-compatible choices
+  if (Array.isArray(data.choices) && data.choices[0]?.message?.content) {
+    return data.choices[0].message.content;
+  }
+
+  // Simple top-level fields
+  if (typeof data.content === "string") return data.content;
+  if (typeof data.output === "string") return data.output;
+
+  // predictions array
+  if (Array.isArray(data.predictions)) {
+    const first = data.predictions[0];
+    if (typeof first === "string") return first;
+    if (typeof first === "object" && first !== null) {
+      return first.content ?? first.output ?? first.text ?? JSON.stringify(first, null, 2);
+    }
+  }
+
+  return JSON.stringify(data, null, 2);
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -95,31 +134,7 @@ export async function POST(
 
     const data = await res.json();
 
-    if (typeof data === "object" && data !== null) {
-      // ChatAgent / OpenAI-compatible response
-      if (Array.isArray(data.choices) && data.choices[0]?.message?.content) {
-        assistantContent = data.choices[0].message.content;
-      } else if (typeof data.content === "string") {
-        assistantContent = data.content;
-      } else if (typeof data.output === "string") {
-        assistantContent = data.output;
-      // dataframe_records response: predictions array
-      } else if (Array.isArray(data.predictions)) {
-        const first = data.predictions[0];
-        if (typeof first === "string") {
-          assistantContent = first;
-        } else if (typeof first === "object" && first !== null) {
-          assistantContent =
-            first.content ?? first.output ?? first.text ?? JSON.stringify(first, null, 2);
-        } else {
-          assistantContent = JSON.stringify(data.predictions, null, 2);
-        }
-      } else {
-        assistantContent = JSON.stringify(data, null, 2);
-      }
-    } else {
-      assistantContent = String(data);
-    }
+    assistantContent = extractAgentText(data);
   } catch (err) {
     assistantContent = `Error communicating with audit agent: ${err instanceof Error ? err.message : String(err)}`;
   }

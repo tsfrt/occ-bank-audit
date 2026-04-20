@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Markdown from "react-markdown";
 
 const HANDBOOK_DOMAINS = [
   { value: "bsa_aml", label: "BSA/AML", code: "00" },
@@ -156,7 +157,7 @@ export function HandbookAuditSection({ caseId }: Props) {
         </select>
       </div>
 
-      <div className="rounded-md border border-card-border bg-section-bg flex flex-col" style={{ height: "28rem" }}>
+      <div className="rounded-md border border-card-border bg-section-bg flex flex-col" style={{ height: "36rem" }}>
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
           {historyLoading && (
             <p className="text-sm text-muted text-center py-8">Loading history…</p>
@@ -178,22 +179,23 @@ export function HandbookAuditSection({ caseId }: Props) {
               key={msg.id}
               className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              <div
-                className={`max-w-[85%] rounded-lg px-3.5 py-2.5 text-sm ${
-                  msg.role === "user"
-                    ? "bg-accent text-white"
-                    : "bg-card-bg border border-card-border text-foreground"
-                }`}
-              >
-                <div className="whitespace-pre-wrap break-words">{msg.content}</div>
-                <div
-                  className={`text-[10px] mt-1.5 ${
-                    msg.role === "user" ? "text-white/60" : "text-muted-light"
-                  }`}
-                >
-                  {new Date(msg.createdAt).toLocaleString()}
+              {msg.role === "user" ? (
+                <div className="max-w-[85%] rounded-lg px-3.5 py-2.5 text-sm bg-accent text-white">
+                  <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+                  <div className="text-[10px] mt-1.5 text-white/60">
+                    {new Date(msg.createdAt).toLocaleString()}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="max-w-[95%] rounded-lg px-4 py-3 text-sm bg-card-bg border border-card-border text-foreground">
+                  <div className="prose prose-sm max-w-none break-words prose-headings:text-foreground prose-headings:mt-3 prose-headings:mb-1.5 prose-h2:text-base prose-h3:text-sm prose-p:my-1.5 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0.5 prose-strong:text-foreground prose-code:text-accent prose-code:text-xs prose-code:bg-section-bg prose-code:px-1 prose-code:py-0.5 prose-code:rounded">
+                    <Markdown>{msg.content}</Markdown>
+                  </div>
+                  <div className="text-[10px] mt-2 text-muted-light">
+                    {new Date(msg.createdAt).toLocaleString()}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
 
