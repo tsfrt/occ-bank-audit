@@ -60,10 +60,11 @@ model AuditCase {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  auditor       Auditor       @relation(fields: [auditorId], references: [id], onDelete: Restrict)
-  analyses      CaseAnalysis[]
-  reviews       CaseReview[]
-  notifications Notification[]
+  auditor              Auditor                @relation(fields: [auditorId], references: [id], onDelete: Restrict)
+  analyses             CaseAnalysis[]
+  reviews              CaseReview[]
+  notifications        Notification[]
+  handbookAuditMessages HandbookAuditMessage[]
 
   @@index([status])
   @@index([createdAt])
@@ -100,6 +101,39 @@ model CaseReview {
 
   @@index([caseId])
   @@map("case_reviews")
+}
+
+enum HandbookAuditDomain {
+  bsa_aml
+  loan_portfolio_management
+  rating_credit_risk
+  allowances_credit_losses
+  corporate_risk_governance
+  internal_external_audits
+  liquidity
+  interest_rate_risk
+  capital_dividends
+  commercial_real_estate
+  commercial_loans
+  residential_real_estate
+  concentrations_of_credit
+  leveraged_lending
+  credit_card_lending
+}
+
+model HandbookAuditMessage {
+  id        String               @id @default(cuid())
+  caseId    String               @map("case_id")
+  domain    HandbookAuditDomain
+  role      String               // "user" or "assistant"
+  content   String
+  createdAt DateTime             @default(now()) @map("created_at")
+
+  case AuditCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@index([caseId, domain])
+  @@map("handbook_audit_messages")
 }
 
 enum NotificationType {
