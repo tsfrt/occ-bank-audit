@@ -31,9 +31,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </Link>
               </h1>
             </div>
-            <p className="text-sm text-white/70 mt-1 ml-12">
-              Office of the Comptroller of the Currency
-            </p>
+            <nav className="flex items-center gap-4 mt-2 ml-12 text-sm">
+              <Link
+                href="/dashboard"
+                className={`transition-colors ${pathname.startsWith("/dashboard") || pathname.startsWith("/cases") ? "text-white font-medium" : "text-white/70 hover:text-white/90"}`}
+              >
+                Cases
+              </Link>
+              <Link
+                href="/jobs"
+                className={`transition-colors ${pathname.startsWith("/jobs") ? "text-white font-medium" : "text-white/70 hover:text-white/90"}`}
+              >
+                Jobs
+              </Link>
+            </nav>
           </div>
           <NotificationBell />
         </div>
